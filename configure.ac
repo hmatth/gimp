@@ -10,8 +10,8 @@ AC_PREREQ(2.54)
 # devel-docs/libtool-instructions.txt
 
 m4_define([gimp_major_version], [2])
-m4_define([gimp_minor_version], [9])
-m4_define([gimp_micro_version], [1])
+m4_define([gimp_minor_version], [99])
+m4_define([gimp_micro_version], [0])
 m4_define([gimp_real_version],
           [gimp_major_version.gimp_minor_version.gimp_micro_version])
 m4_define([gimp_version], [gimp_real_version])
@@ -20,20 +20,20 @@ m4_define([gimp_binary_age],
           [m4_eval(100 * gimp_minor_version + gimp_micro_version)])
 
 # For overriding the version string. Comment out if not needed.
-# m4_define([gimp_version], [2.9.1])
+# m4_define([gimp_version], [2.99.0])
 
 # This is the X.Y used in -lgimp-X.Y
-m4_define([gimp_api_version], [2.0])
+m4_define([gimp_api_version], [3.0])
 
 # Versions used for apps, plugins, tools, pkg-config files, and data,
 # as well as global and user prefs
-m4_define([gimp_app_version], [2.9])
-m4_define([gimp_plugin_version], [2.0])
-m4_define([gimp_tool_version], [2.0])
-m4_define([gimp_pkgconfig_version], [2.0])
-m4_define([gimp_data_version], [2.0])
-m4_define([gimp_sysconf_version], [2.0])
-m4_define([gimp_user_version], [2.9])
+m4_define([gimp_app_version], [2.99])
+m4_define([gimp_plugin_version], [3.0])
+m4_define([gimp_tool_version], [3.0])
+m4_define([gimp_pkgconfig_version], [3.0])
+m4_define([gimp_data_version], [3.0])
+m4_define([gimp_sysconf_version], [3.0])
+m4_define([gimp_user_version], [3.0])
 
 m4_define([gimp_unstable],
           m4_if(m4_eval(gimp_minor_version % 2), [1], [yes], [no]))
@@ -46,8 +46,8 @@ m4_define([gimp_full_name], [GNU Image Manipulation Program])
 m4_define([babl_required_version], [0.1.12])
 m4_define([gegl_required_version], [0.3.0])
 m4_define([glib_required_version], [2.40.0])
-m4_define([atk_required_version], [2.2.0])
-m4_define([gtk_required_version], [2.24.10])
+m4_define([atk_required_version], [2.4.0])
+m4_define([gtk_required_version], [3.4.0])
 m4_define([gdk_pixbuf_required_version], [2.30.8])
 m4_define([cairo_required_version], [1.12.2])
 m4_define([cairo_pdf_required_version], [1.12.2])
@@ -207,7 +207,7 @@ AC_SUBST(LT_CURRENT_MINUS_AGE)
 
 
 # gettext i18n support
-GETTEXT_PACKAGE=gimp20
+GETTEXT_PACKAGE=gimp30
 AC_SUBST(GETTEXT_PACKAGE)
 AC_DEFINE_UNQUOTED(GETTEXT_PACKAGE, "$GETTEXT_PACKAGE",
                    [The prefix for our gettext translation domains.])
@@ -620,23 +620,13 @@ LIBS=$gimp_save_LIBS
 
 AC_PATH_XTRA
 
-AM_PATH_GTK_2_0(gtk_required_version, :,
+AM_PATH_GTK_3_0(gtk_required_version, :,
   AC_MSG_ERROR(Test for GTK+ failed. See the file 'INSTALL' for help.))
 
 AC_PATH_PROG(GTK_UPDATE_ICON_CACHE, gtk-update-icon-cache, no)
 if test "x$GTK_UPDATE_ICON_CACHE" = xno; then
   AC_MSG_ERROR(Could not find gtk-update-icon-cache in your PATH)
 fi
-
-# GTK+ 2.26.0 will never be released, we keep the check around anyway
-# because we will need it again after the switch to GTK+ 3.x
-AC_MSG_CHECKING([if GTK+ is version 2.26.0 or newer (bogus placeholder check)])
-if $PKG_CONFIG --atleast-version=2.26.0 gtk+-2.0; then
-  have_gtk_2_26=yes
-else
-  have_gtk_2_26=no
-fi
-AC_MSG_RESULT($have_gtk_2_26)
 
 PKG_CHECK_MODULES(GDK_PIXBUF, gdk-pixbuf-2.0 >= gdk_pixbuf_required_version)
 
@@ -1133,7 +1123,7 @@ fi
 ################################
 
 # Check if building for GTK+-X11
-gdk_target=`$PKG_CONFIG --variable=target gtk+-2.0`
+gdk_target=`$PKG_CONFIG --variable=target gtk+-3.0`
 
 have_libxmu="no (building for $gdk_target)"
 
@@ -1486,7 +1476,7 @@ AC_ARG_WITH(webkit, [  --without-webkit        don't build the help-browser and 
 
 have_webkit=no
 if test "x$with_webkit" != xno; then
-  PKG_CHECK_MODULES(WEBKIT, webkit-1.0 >= webkit_required_version,
+  PKG_CHECK_MODULES(WEBKIT, webkitgtk-3.0 >= webkitgtk_required_version,
     WEB_PAGE='web-page$(EXEEXT)'
     have_webkit=yes,
     have_webkit="no (WebKit not found)")
@@ -1918,9 +1908,9 @@ AM_CONDITIONAL(PLATFORM_OSX, test "x$platform_osx" = xyes)
 
 gtk_mac_integration_ok=no
 if test "x$platform_osx" != xno &&
-   test "x`$PKG_CONFIG --variable=target gtk+-2.0`" == "xquartz"; then
+   (echo `pkg-config --variable=targets gtk+-3.0` | grep quartz); then
 
-  PKG_CHECK_MODULES(GTK_MAC_INTEGRATION, gtk-mac-integration-gtk2 >= gtk_mac_integration_required_version,
+  PKG_CHECK_MODULES(GTK_MAC_INTEGRATION, gtk-mac-integration-gtk3 >= gtk_mac_integration_required_version,
     gtk_mac_integration_ok=yes,
     gtk_mac_integration_ok=no)
 
@@ -2105,11 +2095,7 @@ if test "x$have_glib_2_43" != "xyes"; then
   CPPFLAGS="${CPPFLAGS} -DG_DISABLE_DEPRECATED"
 fi
 
-if test "x$have_gtk_2_26" != "xyes"; then
-  CPPFLAGS="${CPPFLAGS} -DGDK_DISABLE_DEPRECATED -DGTK_DISABLE_DEPRECATED"
-fi
-
-if test "x$have_gdk_pixbuf_2_31" != "xyes"; then
+if test "x$have_gdk_pixbuf_2_26" != "xyes"; then
   CPPFLAGS="${CPPFLAGS} -DGDK_PIXBUF_DISABLE_DEPRECATED"
 fi
 
