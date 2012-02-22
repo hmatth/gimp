@@ -46,7 +46,7 @@ AM_CPPFLAGS = \
 libexec_PROGRAMS = \
 	align-layers \
 	animation-optimize \
-	animation-play \
+##	animation-play \
 	blinds \
 	blur \
 	blur-gauss-selective \
@@ -62,7 +62,7 @@ libexec_PROGRAMS = \
 	contrast-normalize \
 	contrast-retinex \
 	crop-zealous \
-	curve-bend \
+##	curve-bend \
 	decompose \
 	depth-merge \
 	despeckle \
