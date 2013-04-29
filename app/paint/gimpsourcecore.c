@@ -33,6 +33,7 @@
 #include "core/gimpimage.h"
 #include "core/gimppickable.h"
 
+#include "gimpmultistroke.h"
 #include "gimpsourcecore.h"
 #include "gimpsourceoptions.h"
 
@@ -65,7 +66,7 @@ static gboolean gimp_source_core_start           (GimpPaintCore     *paint_core,
 static void     gimp_source_core_paint           (GimpPaintCore     *paint_core,
                                                   GimpDrawable      *drawable,
                                                   GimpPaintOptions  *paint_options,
-                                                  const GimpCoords  *coords,
+                                                  GimpMultiStroke   *mstroke,
                                                   GimpPaintState     paint_state,
                                                   guint32            time);
 
@@ -73,7 +74,7 @@ static void     gimp_source_core_paint           (GimpPaintCore     *paint_core,
 static void     gimp_source_core_motion          (GimpSourceCore    *source_core,
                                                   GimpDrawable      *drawable,
                                                   GimpPaintOptions  *paint_options,
-                                                  const GimpCoords  *coords);
+                                                  GimpMultiStroke   *mstroke);
 #endif
 
 static gboolean gimp_source_core_real_use_source (GimpSourceCore    *source_core,
@@ -253,12 +254,16 @@ static void
 gimp_source_core_paint (GimpPaintCore    *paint_core,
                         GimpDrawable     *drawable,
                         GimpPaintOptions *paint_options,
-                        const GimpCoords *coords,
+                        GimpMultiStroke  *mstroke,
                         GimpPaintState    paint_state,
                         guint32           time)
 {
   GimpSourceCore    *source_core = GIMP_SOURCE_CORE (paint_core);
   GimpSourceOptions *options     = GIMP_SOURCE_OPTIONS (paint_options);
+  const GimpCoords  *coords;
+
+  /* The source is based on the original stroke */
+  coords = gimp_multi_stroke_get_origin (mstroke);
 
   switch (paint_state)
     {
@@ -322,7 +327,8 @@ gimp_source_core_paint (GimpPaintCore    *paint_core,
           source_core->src_x = dest_x + source_core->offset_x;
           source_core->src_y = dest_y + source_core->offset_y;
 
-          gimp_source_core_motion (source_core, drawable, paint_options, coords);
+          gimp_source_core_motion (source_core, drawable, paint_options,
+                                   mstroke);
         }
       break;
 
@@ -347,7 +353,7 @@ void
 gimp_source_core_motion (GimpSourceCore   *source_core,
                          GimpDrawable     *drawable,
                          GimpPaintOptions *paint_options,
-                         const GimpCoords *coords)
+                         GimpMultiStroke  *mstroke)
 
 {
   GimpPaintCore     *paint_core   = GIMP_PAINT_CORE (source_core);
@@ -368,98 +374,118 @@ gimp_source_core_motion (GimpSourceCore   *source_core,
   gint               paint_area_height;
   gdouble            fade_point;
   gdouble            opacity;
+  GeglNode          *op;
+  GimpCoords        *origin;
+  GimpCoords        *coords;
+  gint               nstrokes;
+  gint               i;
 
   fade_point = gimp_paint_options_get_fade (paint_options, image,
                                             paint_core->pixel_dist);
 
-  opacity = gimp_dynamics_get_linear_value (dynamics,
-                                            GIMP_DYNAMICS_OUTPUT_OPACITY,
-                                            coords,
-                                            paint_options,
-                                            fade_point);
-  if (opacity == 0.0)
-    return;
+  origin   = gimp_multi_stroke_get_origin (mstroke);
+  nstrokes = gimp_multi_stroke_get_size (mstroke);
 
-  src_offset_x = source_core->offset_x;
-  src_offset_y = source_core->offset_y;
-
-  if (gimp_source_core_use_source (source_core, options))
+  for (i = 0; i < nstrokes; i++)
     {
-      src_pickable = GIMP_PICKABLE (source_core->src_drawable);
+      coords = gimp_multi_stroke_get_coords (mstroke, i);
 
-      if (options->sample_merged)
+      opacity = gimp_dynamics_get_linear_value (dynamics,
+                                                GIMP_DYNAMICS_OUTPUT_OPACITY,
+                                                coords,
+                                                paint_options,
+                                                fade_point);
+      if (opacity == 0.0)
+        continue;
+
+      src_offset_x = source_core->offset_x;
+      src_offset_y = source_core->offset_y;
+
+      if (gimp_source_core_use_source (source_core, options))
         {
-          GimpImage *src_image = gimp_pickable_get_image (src_pickable);
-          gint       off_x, off_y;
+          src_pickable = GIMP_PICKABLE (source_core->src_drawable);
 
-          src_pickable = GIMP_PICKABLE (src_image);
+          if (options->sample_merged)
+            {
+              GimpImage *src_image = gimp_pickable_get_image (src_pickable);
+              gint       off_x, off_y;
 
-          gimp_item_get_offset (GIMP_ITEM (source_core->src_drawable),
-                                &off_x, &off_y);
+              src_pickable = GIMP_PICKABLE (src_image);
 
-          src_offset_x += off_x;
-          src_offset_y += off_y;
+              gimp_item_get_offset (GIMP_ITEM (source_core->src_drawable),
+                                    &off_x, &off_y);
+
+              src_offset_x += off_x;
+              src_offset_y += off_y;
+            }
+
+          gimp_pickable_flush (src_pickable);
         }
 
-      gimp_pickable_flush (src_pickable);
+      paint_buffer = gimp_paint_core_get_paint_buffer (paint_core, drawable,
+                                                       paint_options, coords,
+                                                       &paint_buffer_x,
+                                                       &paint_buffer_y);
+      if (! paint_buffer)
+        continue;
+
+      paint_area_offset_x = 0;
+      paint_area_offset_y = 0;
+      paint_area_width    = gegl_buffer_get_width  (paint_buffer);
+      paint_area_height   = gegl_buffer_get_height (paint_buffer);
+
+      if (gimp_source_core_use_source (source_core, options))
+        {
+          /* When using a source, use the same for every stroke. */
+          src_offset_x = src_offset_x - coords->x + origin->x;
+          src_offset_y = src_offset_y - coords->y + origin->y;
+          src_buffer =
+            GIMP_SOURCE_CORE_GET_CLASS (source_core)->get_source (source_core,
+                                                                  drawable,
+                                                                  paint_options,
+                                                                  src_pickable,
+                                                                  src_offset_x,
+                                                                  src_offset_y,
+                                                                  paint_buffer,
+                                                                  paint_buffer_x,
+                                                                  paint_buffer_y,
+                                                                  &paint_area_offset_x,
+                                                                  &paint_area_offset_y,
+                                                                  &paint_area_width,
+                                                                  &paint_area_height,
+                                                                  &src_rect);
+
+          if (! src_buffer)
+            continue;
+        }
+
+      /*  Set the paint buffer to transparent  */
+      gegl_buffer_clear (paint_buffer, NULL);
+
+      op = gimp_multi_stroke_get_operation (mstroke, paint_core,
+                                            paint_buffer, i);
+      GIMP_SOURCE_CORE_GET_CLASS (source_core)->motion (source_core,
+                                                        drawable,
+                                                        paint_options,
+                                                        coords,
+                                                        op,
+                                                        opacity,
+                                                        src_pickable,
+                                                        src_buffer,
+                                                        &src_rect,
+                                                        src_offset_x,
+                                                        src_offset_y,
+                                                        paint_buffer,
+                                                        paint_buffer_x,
+                                                        paint_buffer_y,
+                                                        paint_area_offset_x,
+                                                        paint_area_offset_y,
+                                                        paint_area_width,
+                                                        paint_area_height);
+
+      if (src_buffer)
+        g_object_unref (src_buffer);
     }
-
-  paint_buffer = gimp_paint_core_get_paint_buffer (paint_core, drawable,
-                                                   paint_options, coords,
-                                                   &paint_buffer_x,
-                                                   &paint_buffer_y);
-  if (! paint_buffer)
-    return;
-
-  paint_area_offset_x = 0;
-  paint_area_offset_y = 0;
-  paint_area_width    = gegl_buffer_get_width  (paint_buffer);
-  paint_area_height   = gegl_buffer_get_height (paint_buffer);
-
-  if (gimp_source_core_use_source (source_core, options))
-    {
-      src_buffer =
-        GIMP_SOURCE_CORE_GET_CLASS (source_core)->get_source (source_core,
-                                                              drawable,
-                                                              paint_options,
-                                                              src_pickable,
-                                                              src_offset_x,
-                                                              src_offset_y,
-                                                              paint_buffer,
-                                                              paint_buffer_x,
-                                                              paint_buffer_y,
-                                                              &paint_area_offset_x,
-                                                              &paint_area_offset_y,
-                                                              &paint_area_width,
-                                                              &paint_area_height,
-                                                              &src_rect);
-      if (! src_buffer)
-        return;
-    }
-
-  /*  Set the paint buffer to transparent  */
-  gegl_buffer_clear (paint_buffer, NULL);
-
-  GIMP_SOURCE_CORE_GET_CLASS (source_core)->motion (source_core,
-                                                    drawable,
-                                                    paint_options,
-                                                    coords,
-                                                    opacity,
-                                                    src_pickable,
-                                                    src_buffer,
-                                                    &src_rect,
-                                                    src_offset_x,
-                                                    src_offset_y,
-                                                    paint_buffer,
-                                                    paint_buffer_x,
-                                                    paint_buffer_y,
-                                                    paint_area_offset_x,
-                                                    paint_area_offset_y,
-                                                    paint_area_width,
-                                                    paint_area_height);
-
-  if (src_buffer)
-    g_object_unref (src_buffer);
 }
 
 gboolean

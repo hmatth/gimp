@@ -36,6 +36,9 @@
 
 #include "gegl/gimp-babl.h"
 
+#include "paint/gimpmultistroke.h"
+#include "paint/gimpmultistroke-info.h"
+
 #include "gimp.h"
 #include "gimp-memsize.h"
 #include "gimp-parasites.h"
@@ -694,6 +697,11 @@ gimp_image_init (GimpImage *image)
 
   private->projection          = gimp_projection_new (GIMP_PROJECTABLE (image));
 
+  private->transformations     = NULL;
+  private->selected_transform  = NULL;
+  private->single_stroke       = gimp_multi_stroke_new (GIMP_TYPE_MULTI_STROKE,
+                                                        image);
+
   private->guides              = NULL;
   private->grid                = NULL;
   private->sample_points       = NULL;
@@ -1039,6 +1047,18 @@ gimp_image_finalize (GObject *object)
     {
       g_list_free_full (private->guides, (GDestroyNotify) g_object_unref);
       private->guides = NULL;
+    }
+
+  if (private->transformations)
+    {
+      g_list_free_full (private->transformations, g_object_unref);
+      private->transformations = NULL;
+    }
+
+  if (private->single_stroke)
+    {
+      g_object_unref (private->single_stroke);
+      private->single_stroke = NULL;
     }
 
   if (private->grid)
@@ -2275,8 +2295,11 @@ gimp_image_get_xcf_version (GimpImage    *image,
                             gint         *gimp_version,
                             const gchar **version_string)
 {
-  GList *list;
-  gint   version = 0;  /* default to oldest */
+  GimpImagePrivate *private;
+  GList            *list;
+  gint              version = 0;  /* default to oldest */
+
+  private = GIMP_IMAGE_GET_PRIVATE (image);
 
   /* need version 1 for colormaps */
   if (gimp_image_get_colormap (image))
@@ -2323,6 +2346,12 @@ gimp_image_get_xcf_version (GimpImage    *image,
   /* need version 8 for zlib compression */
   if (zlib_compression)
     version = MAX (8, version);
+
+  /* need version 9 for Multi-Stroke */
+  if (private->transformations)
+    {
+      version = MAX (9, version);
+    }
 
   switch (version)
     {
@@ -4537,4 +4566,151 @@ gimp_image_invalidate_previews (GimpImage *image)
 
   gimp_item_stack_invalidate_previews (layers);
   gimp_item_stack_invalidate_previews (channels);
+}
+
+/**
+ * gimp_image_add_multi_stroke:
+ * @image:   the #GimpImage
+ * @mstroke: the #GimpMultiStroke
+ *
+ * Add a multi-stroke transformation to @image and make it the
+ * selected transformation.
+ **/
+void
+gimp_image_add_multi_stroke (GimpImage       *image,
+                             GimpMultiStroke *mstroke)
+{
+  GimpImagePrivate *private;
+
+  g_return_if_fail (GIMP_IS_IMAGE (image));
+  g_return_if_fail (GIMP_IS_MULTI_STROKE (mstroke));
+
+  private = GIMP_IMAGE_GET_PRIVATE (image);
+
+  private->transformations = g_list_prepend (private->transformations,
+                                             g_object_ref (mstroke));
+  private->selected_transform = mstroke;
+}
+
+/**
+ * gimp_image_remove_multi_stroke:
+ * @image:   the #GimpImage
+ * @mstroke: the #GimpMultiStroke
+ *
+ * Remove @mstroke from the list of transformations of @image.
+ * If it was the selected transformation, unselect it first.
+ **/
+void
+gimp_image_remove_multi_stroke (GimpImage       *image,
+                                GimpMultiStroke *mstroke)
+{
+  GimpImagePrivate *private;
+
+  g_return_if_fail (GIMP_IS_MULTI_STROKE (mstroke));
+  g_return_if_fail (GIMP_IS_IMAGE (image));
+
+  private = GIMP_IMAGE_GET_PRIVATE (image);
+
+  if (private->selected_transform == mstroke)
+    private->selected_transform = NULL;
+  private->transformations = g_list_remove (private->transformations,
+                                            mstroke);
+  g_object_unref (mstroke);
+}
+
+/**
+ * gimp_image_get_multi_stroke:
+ * @image: the #GimpImage
+ *
+ * Returns a list of #GimpMultiStroke set on @image.
+ * The returned list belongs to @image and should not be freed.
+ **/
+GList *
+gimp_image_get_multi_strokes (GimpImage *image)
+{
+  GimpImagePrivate *private;
+
+  g_return_val_if_fail (GIMP_IS_IMAGE (image), FALSE);
+
+  private = GIMP_IMAGE_GET_PRIVATE (image);
+
+  return private->transformations;
+}
+
+/**
+ * gimp_image_select_multi_stroke:
+ * @image: the #GimpImage
+ * @type:  the #GType of the multi-stroke
+ *
+ * Select the multi-stroke of type @type.
+ * Using the GType allows to select a transformation without
+ * knowing whether one of the same @type was already created.
+ *
+ * Returns TRUE on success, FALSE if no such multi-stroke was found.
+ **/
+gboolean
+gimp_image_select_multi_stroke (GimpImage *image,
+                                GType      type)
+{
+  GimpImagePrivate *private;
+  GList *iter;
+
+  g_return_val_if_fail (GIMP_IS_IMAGE (image), FALSE);
+
+  private = GIMP_IMAGE_GET_PRIVATE (image);
+
+  if (type == G_TYPE_NONE)
+    {
+      private->selected_transform = NULL;
+      return TRUE;
+    }
+  else
+    {
+      for (iter = private->transformations; iter; iter = g_list_next (iter))
+        {
+          GimpMultiStroke *mstroke = iter->data;
+          if (g_type_is_a (mstroke->type, type))
+            {
+              private->selected_transform = iter->data;
+              return TRUE;
+            }
+        }
+    }
+  return FALSE;
+}
+
+/**
+ * gimp_image_get_selected_multi_stroke:
+ * @image: the #GimpImage
+ *
+ * Returns the #GimpMultiStroke transformation selected on @image.
+ **/
+GimpMultiStroke *
+gimp_image_get_selected_multi_stroke (GimpImage *image)
+{
+  GimpImagePrivate *private;
+
+  g_return_val_if_fail (GIMP_IS_IMAGE (image), FALSE);
+
+  private = GIMP_IMAGE_GET_PRIVATE (image);
+
+  return private->selected_transform;
+}
+
+/**
+ * gimp_image_get_single_stroke:
+ * @image: the #GimpImage
+ *
+ * Returns the basic "single stroke" #GimpMultiStroke.
+ **/
+GimpMultiStroke *
+gimp_image_get_single_stroke (GimpImage *image)
+{
+  GimpImagePrivate *private;
+
+  g_return_val_if_fail (GIMP_IS_IMAGE (image), FALSE);
+
+  private = GIMP_IMAGE_GET_PRIVATE (image);
+
+  return private->single_stroke;
 }

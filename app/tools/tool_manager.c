@@ -774,6 +774,9 @@ tool_manager_preset_changed (GimpContext     *user_context,
       if (config->global_gradient && preset->use_gradient)
         gimp_paint_options_copy_gradient_props (GIMP_PAINT_OPTIONS (src),
                                                 GIMP_PAINT_OPTIONS (dest));
+
+      gimp_paint_options_set_mstroke_props (GIMP_PAINT_OPTIONS (src),
+                                            GIMP_PAINT_OPTIONS (dest));
     }
 }
 
@@ -842,6 +845,9 @@ tool_manager_connect_options (GimpToolManager *tool_manager,
           if (config->global_gradient)
             gimp_paint_options_copy_gradient_props (tool_manager->shared_paint_options,
                                                     GIMP_PAINT_OPTIONS (tool_info->tool_options));
+
+          gimp_paint_options_set_mstroke_props (tool_manager->shared_paint_options,
+                                                GIMP_PAINT_OPTIONS (tool_info->tool_options));
         }
     }
 }
@@ -866,6 +872,9 @@ tool_manager_disconnect_options (GimpToolManager *tool_manager,
 
           gimp_paint_options_copy_gradient_props (GIMP_PAINT_OPTIONS (tool_info->tool_options),
                                                   tool_manager->shared_paint_options);
+
+          gimp_paint_options_set_mstroke_props (GIMP_PAINT_OPTIONS (tool_info->tool_options),
+                                                tool_manager->shared_paint_options);
         }
 
       gimp_context_set_parent (GIMP_CONTEXT (tool_info->tool_options), NULL);

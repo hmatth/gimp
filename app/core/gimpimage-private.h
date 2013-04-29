@@ -81,6 +81,10 @@ struct _GimpImagePrivate
   GeglNode          *graph;                 /*  GEGL projection graph        */
   GeglNode          *visible_mask;          /*  component visibility node    */
 
+  GList             *transformations;       /* Multi-Stroke transformations  */
+  GimpMultiStroke   *selected_transform;    /* Selected transformation       */
+  GimpMultiStroke   *single_stroke;         /* The base "Single" stroke      */
+
   GList             *guides;                /*  guides                       */
   GimpGrid          *grid;                  /*  grid                         */
   GList             *sample_points;         /*  color sample points          */

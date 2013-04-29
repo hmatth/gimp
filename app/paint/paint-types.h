@@ -42,6 +42,9 @@ typedef struct _GimpPencil           GimpPencil;
 typedef struct _GimpPerspectiveClone GimpPerspectiveClone;
 typedef struct _GimpSmudge           GimpSmudge;
 
+/* Multi-stroke transformations */
+typedef struct _GimpMultiStroke      GimpMultiStroke;
+typedef struct _GimpMirror           GimpMirror;
 
 /*  paint options  */
 

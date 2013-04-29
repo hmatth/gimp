@@ -34,6 +34,9 @@
 #include "core/gimpgradient.h"
 #include "core/gimppaintinfo.h"
 
+#include "gimpmultistroke.h"
+#include "gimpmultistroke-info.h"
+
 #include "gimppaintoptions.h"
 
 #include "gimp-intl.h"
@@ -127,7 +130,9 @@ enum
   PROP_BRUSH_LINK_ASPECT_RATIO,
   PROP_BRUSH_LINK_ANGLE,
   PROP_BRUSH_LINK_SPACING,
-  PROP_BRUSH_LINK_HARDNESS
+  PROP_BRUSH_LINK_HARDNESS,
+
+  PROP_MULTI_STROKE
 };
 
 
@@ -365,6 +370,11 @@ gimp_paint_options_class_init (GimpPaintOptionsClass *klass)
                                     * less than velcoty results in numeric
                                     * instablility */
                                    GIMP_PARAM_STATIC_STRINGS);
+
+  GIMP_CONFIG_INSTALL_PROP_INT (object_class, PROP_MULTI_STROKE,
+                                "multi-stroke", _("Multi Stroke transformation"),
+                                G_TYPE_NONE, INT_MAX, G_TYPE_NONE,
+                                GIMP_PARAM_STATIC_STRINGS);
 }
 
 static void
@@ -422,11 +432,14 @@ gimp_paint_options_set_property (GObject      *object,
                                  const GValue *value,
                                  GParamSpec   *pspec)
 {
+  GimpContext          *context;
   GimpPaintOptions     *options           = GIMP_PAINT_OPTIONS (object);
   GimpFadeOptions      *fade_options      = options->fade_options;
   GimpJitterOptions    *jitter_options    = options->jitter_options;
   GimpGradientOptions  *gradient_options  = options->gradient_options;
   GimpSmoothingOptions *smoothing_options = options->smoothing_options;
+
+  context = gimp_get_user_context (GIMP_CONTEXT (object)->gimp);
 
   switch (property_id)
     {
@@ -568,6 +581,28 @@ gimp_paint_options_set_property (GObject      *object,
 
     case PROP_SMOOTHING_FACTOR:
       smoothing_options->smoothing_factor = g_value_get_double (value);
+      break;
+
+    case PROP_MULTI_STROKE:
+      options->multi_stroke = g_value_get_int (value);
+      if (context && context->image)
+        {
+          if (! gimp_image_select_multi_stroke (context->image,
+                                                options->multi_stroke))
+            {
+              GimpMultiStroke *mstroke;
+
+              mstroke  = gimp_multi_stroke_new (options->multi_stroke,
+                                                context->image);
+              gimp_image_add_multi_stroke (context->image,
+                                           GIMP_MULTI_STROKE (mstroke));
+              g_object_unref (mstroke);
+            }
+        }
+      else
+        {
+          options->multi_stroke = G_TYPE_NONE;
+        }
       break;
 
     default:
@@ -728,6 +763,10 @@ gimp_paint_options_get_property (GObject    *object,
 
     case PROP_SMOOTHING_FACTOR:
       g_value_set_double (value, smoothing_options->smoothing_factor);
+      break;
+
+    case PROP_MULTI_STROKE:
+      g_value_set_int (value, options->multi_stroke);
       break;
 
     default:
@@ -1111,4 +1150,35 @@ gimp_paint_options_copy_gradient_props (GimpPaintOptions *src,
   g_object_set (dest,
                 "gradient-reverse", gradient_reverse,
                 NULL);
+}
+
+/**
+ * Update the paint options of the current tool according to image settings.
+ * Multi-Stroke settings are actually attached to an image, and therefore
+ * depends on the current context image.
+ */
+void
+gimp_paint_options_set_mstroke_props (GimpPaintOptions *src,
+                                      GimpPaintOptions *dest)
+{
+  GimpContext *context;
+  GimpImage   *image;
+
+  g_return_if_fail (GIMP_IS_PAINT_OPTIONS (src));
+  g_return_if_fail (GIMP_IS_PAINT_OPTIONS (dest));
+
+  context = gimp_get_user_context (GIMP_CONTEXT (dest)->gimp);
+  image   = context->image;
+
+  if (image)
+    {
+      GimpMultiStroke  *mstroke;
+
+      mstroke = gimp_image_get_selected_multi_stroke (image);
+
+      g_object_set (dest,
+                    "multi-stroke",
+                    mstroke ? mstroke->type : G_TYPE_NONE,
+                    NULL);
+    }
 }

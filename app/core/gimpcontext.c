@@ -51,6 +51,9 @@
 #include "gimptoolinfo.h"
 #include "gimptoolpreset.h"
 
+#include "paint/gimpmultistroke.h"
+#include "paint/gimppaintoptions.h"
+
 #include "text/gimpfont.h"
 
 #include "gimp-intl.h"
@@ -1913,6 +1916,22 @@ gimp_context_real_set_image (GimpContext *context,
     return;
 
   context->image = image;
+
+  if (context->tool_info &&
+      GIMP_IS_PAINT_OPTIONS (context->tool_info->tool_options))
+    {
+      GimpPaintOptions *paint_options;
+      GimpMultiStroke  *mstroke = NULL;
+
+      paint_options = GIMP_PAINT_OPTIONS (context->tool_info->tool_options);
+
+      if (image)
+        mstroke = gimp_image_get_selected_multi_stroke (image);
+
+      g_object_set (paint_options, "multi-stroke",
+                    mstroke ? mstroke->type : G_TYPE_NONE,
+                    NULL);
+    }
 
   g_object_notify (G_OBJECT (context), "image");
   gimp_context_image_changed (context);

@@ -29,6 +29,8 @@
 #include "core/gimpgradient.h"
 #include "core/gimpimage.h"
 
+#include "gimpmultistroke.h"
+
 #include "gimpairbrush.h"
 #include "gimpairbrushoptions.h"
 
@@ -40,13 +42,13 @@ static void       gimp_airbrush_finalize (GObject          *object);
 static void       gimp_airbrush_paint    (GimpPaintCore    *paint_core,
                                           GimpDrawable     *drawable,
                                           GimpPaintOptions *paint_options,
-                                          const GimpCoords *coords,
+                                          GimpMultiStroke  *mstroke,
                                           GimpPaintState    paint_state,
                                           guint32           time);
 static void       gimp_airbrush_motion   (GimpPaintCore    *paint_core,
                                           GimpDrawable     *drawable,
                                           GimpPaintOptions *paint_options,
-                                          const GimpCoords *coords);
+                                          GimpMultiStroke  *mstroke);
 static gboolean   gimp_airbrush_timeout  (gpointer          data);
 
 
@@ -82,6 +84,7 @@ static void
 gimp_airbrush_init (GimpAirbrush *airbrush)
 {
   airbrush->timeout_id = 0;
+  airbrush->mstroke    = NULL;
 }
 
 static void
@@ -95,6 +98,9 @@ gimp_airbrush_finalize (GObject *object)
       airbrush->timeout_id = 0;
     }
 
+  if (airbrush->mstroke)
+    g_object_unref (airbrush->mstroke);
+
   G_OBJECT_CLASS (parent_class)->finalize (object);
 }
 
@@ -102,7 +108,7 @@ static void
 gimp_airbrush_paint (GimpPaintCore    *paint_core,
                      GimpDrawable     *drawable,
                      GimpPaintOptions *paint_options,
-                     const GimpCoords *coords,
+                     GimpMultiStroke  *mstroke,
                      GimpPaintState    paint_state,
                      guint32           time)
 {
@@ -121,7 +127,7 @@ gimp_airbrush_paint (GimpPaintCore    *paint_core,
 
       GIMP_PAINT_CORE_CLASS (parent_class)->paint (paint_core, drawable,
                                                    paint_options,
-                                                   coords,
+                                                   mstroke,
                                                    paint_state, time);
       break;
 
@@ -132,20 +138,28 @@ gimp_airbrush_paint (GimpPaintCore    *paint_core,
           airbrush->timeout_id = 0;
         }
 
-      gimp_airbrush_motion (paint_core, drawable, paint_options, coords);
+      gimp_airbrush_motion (paint_core, drawable, paint_options, mstroke);
 
       if ((options->rate != 0.0) && (!options->motion_only))
         {
-          GimpImage *image = gimp_item_get_image (GIMP_ITEM (drawable));
-          gdouble    fade_point;
-          gdouble    dynamic_rate;
-          gint       timeout;
+          GimpImage  *image = gimp_item_get_image (GIMP_ITEM (drawable));
+          gdouble     fade_point;
+          gdouble     dynamic_rate;
+          gint        timeout;
+          GimpCoords *coords;
 
           fade_point = gimp_paint_options_get_fade (paint_options, image,
                                                     paint_core->pixel_dist);
 
           airbrush->drawable      = drawable;
           airbrush->paint_options = paint_options;
+
+          if (airbrush->mstroke)
+            g_object_unref (airbrush->mstroke);
+          airbrush->mstroke = g_object_ref (mstroke);
+
+          /* Base our timeout on the original stroke. */
+          coords = gimp_multi_stroke_get_origin (mstroke);
 
           dynamic_rate = gimp_dynamics_get_linear_value (dynamics,
                                                          GIMP_DYNAMICS_OUTPUT_RATE,
@@ -170,7 +184,7 @@ gimp_airbrush_paint (GimpPaintCore    *paint_core,
 
       GIMP_PAINT_CORE_CLASS (parent_class)->paint (paint_core, drawable,
                                                    paint_options,
-                                                   coords,
+                                                   mstroke,
                                                    paint_state, time);
       break;
     }
@@ -180,7 +194,7 @@ static void
 gimp_airbrush_motion (GimpPaintCore    *paint_core,
                       GimpDrawable     *drawable,
                       GimpPaintOptions *paint_options,
-                      const GimpCoords *coords)
+                      GimpMultiStroke  *mstroke)
 
 {
   GimpAirbrushOptions *options  = GIMP_AIRBRUSH_OPTIONS (paint_options);
@@ -188,9 +202,12 @@ gimp_airbrush_motion (GimpPaintCore    *paint_core,
   GimpImage           *image    = gimp_item_get_image (GIMP_ITEM (drawable));
   gdouble              opacity;
   gdouble              fade_point;
+  GimpCoords          *coords;
 
   fade_point = gimp_paint_options_get_fade (paint_options, image,
                                             paint_core->pixel_dist);
+
+  coords = gimp_multi_stroke_get_origin (mstroke);
 
   opacity = (options->flow / 100.0 *
              gimp_dynamics_get_linear_value (dynamics,
@@ -199,21 +216,19 @@ gimp_airbrush_motion (GimpPaintCore    *paint_core,
                                              paint_options,
                                              fade_point));
 
-  _gimp_paintbrush_motion (paint_core, drawable, paint_options, coords, opacity);
+  _gimp_paintbrush_motion (paint_core, drawable, paint_options,
+                           mstroke, opacity);
 }
 
 static gboolean
 gimp_airbrush_timeout (gpointer data)
 {
   GimpAirbrush *airbrush = GIMP_AIRBRUSH (data);
-  GimpCoords    coords;
-
-  gimp_paint_core_get_current_coords (GIMP_PAINT_CORE (airbrush), &coords);
 
   gimp_airbrush_paint (GIMP_PAINT_CORE (airbrush),
                        airbrush->drawable,
                        airbrush->paint_options,
-                       &coords,
+                       airbrush->mstroke,
                        GIMP_PAINT_STATE_MOTION, 0);
 
   gimp_image_flush (gimp_item_get_image (GIMP_ITEM (airbrush->drawable)));

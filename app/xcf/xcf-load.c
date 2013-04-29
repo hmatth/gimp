@@ -55,6 +55,9 @@
 #include "core/gimpselection.h"
 #include "core/gimptemplate.h"
 
+#include "paint/gimpmultistroke.h"
+#include "paint/gimpmultistroke-info.h"
+
 #include "text/gimptextlayer.h"
 #include "text/gimptextlayer-xcf.h"
 
@@ -723,6 +726,130 @@ xcf_load_image_props (XcfInfo   *info,
              */
             private->guides = g_list_reverse (private->guides);
           }
+          break;
+
+        case PROP_MULTI_STROKE:
+            {
+              GimpMultiStroke *mstroke;
+              GimpMultiStroke *active_mstroke = NULL;
+              gint32           active;
+              gint32           n_mstrokes;
+              gchar           *name;
+              GType            type;
+              GParamSpec     **settings;
+              GParamSpec      *spec;
+              guint            nsettings;
+              gint             i, j;
+
+              info->cp += xcf_read_int32 (info->input,
+                                          (guint32 *) &active, 1);
+              info->cp += xcf_read_int32 (info->input,
+                                          (guint32 *) &n_mstrokes, 1);
+              for (i = 1; i <= n_mstrokes; i++)
+                {
+                  info->cp += xcf_read_string (info->input, &name, 1);
+                  type = g_type_from_name (name);
+                  if (! type || ! g_type_is_a (type, GIMP_TYPE_MULTI_STROKE))
+                    {
+                      gimp_message (info->gimp, G_OBJECT (info->progress),
+                                    GIMP_MESSAGE_ERROR,
+                                    "Unknown Multi-Stroke: %s",
+                                    name);
+                      g_free (name);
+                      return FALSE;
+                    }
+                  mstroke = gimp_multi_stroke_new (type, image);
+                  gimp_image_add_multi_stroke (image, mstroke);
+
+                  settings = gimp_multi_stroke_get_xcf_settings (mstroke,
+                                                                 &nsettings);
+                  for (j = 0; j < nsettings; j++)
+                    {
+                      if (settings[j] == NULL)
+                        continue;
+
+                      spec = settings[j];
+                      switch (spec->value_type)
+                        {
+                        case G_TYPE_BOOLEAN:
+                            {
+                              guint8 value;
+
+                              info->cp += xcf_read_int8 (info->input,
+                                                         &value, 1);
+                              g_object_set (mstroke,
+                                            g_param_spec_get_name (spec),
+                                            (gboolean) value,
+                                            NULL);
+                            }
+                          break;
+                        case G_TYPE_FLOAT:
+                        case G_TYPE_DOUBLE:
+                            {
+                              gfloat value;
+
+                              info->cp += xcf_read_float (info->input,
+                                                          &value, 1);
+                              g_object_set (mstroke,
+                                            g_param_spec_get_name (spec),
+                                            (spec->value_type == G_TYPE_FLOAT) ?
+                                            value : (gdouble) value,
+                                            NULL);
+                            }
+                          break;
+                        case G_TYPE_UINT:
+                            {
+                              guint32 value;
+
+                              info->cp += xcf_read_int32 (info->input,
+                                                          &value, 1);
+                              g_object_set (mstroke,
+                                            g_param_spec_get_name (spec),
+                                            (guint) value,
+                                            NULL);
+                            }
+                          break;
+                        case G_TYPE_INT:
+                            {
+                              guint32 value;
+
+                              info->cp += xcf_read_int32 (info->input,
+                                                          &value, 1);
+                              g_object_set (mstroke,
+                                            g_param_spec_get_name (spec),
+                                            (gint) value,
+                                            NULL);
+                            }
+                          break;
+                        case G_TYPE_STRING:
+                            {
+                              gchar* value;
+
+                              info->cp += xcf_read_string (info->input,
+                                                           &value, 1);
+                              g_object_set (mstroke,
+                                            g_param_spec_get_name (spec),
+                                            value,
+                                            NULL);
+                              g_free (value);
+                            }
+                          break;
+                        default:
+                          /* We don't handle this settings. */
+                          gimp_message (info->gimp, G_OBJECT (info->progress),
+                                        GIMP_MESSAGE_ERROR,
+                                        "Unknown settings '%s' for '%s'",
+                                        name, g_param_spec_get_name (spec));
+                          g_free (name);
+                          return FALSE;
+                        }
+                    }
+                  if (active == i)
+                    active_mstroke = mstroke;
+                }
+              gimp_image_select_multi_stroke (image, active_mstroke->type);
+              g_free (name);
+            }
           break;
 
         case PROP_SAMPLE_POINTS:

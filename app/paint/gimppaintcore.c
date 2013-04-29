@@ -37,11 +37,14 @@
 #include "core/gimp-utils.h"
 #include "core/gimpchannel.h"
 #include "core/gimpimage.h"
+#include "core/gimpimage-guides.h"
 #include "core/gimpimage-undo.h"
 #include "core/gimppickable.h"
 #include "core/gimpprojection.h"
 #include "core/gimptempbuf.h"
 
+#include "gimpmultistroke.h"
+#include "gimpmultistroke-info.h"
 #include "gimppaintcore.h"
 #include "gimppaintcoreundo.h"
 #include "gimppaintcore-loops.h"
@@ -86,7 +89,7 @@ static gboolean  gimp_paint_core_real_pre_paint      (GimpPaintCore    *core,
 static void      gimp_paint_core_real_paint          (GimpPaintCore    *core,
                                                       GimpDrawable     *drawable,
                                                       GimpPaintOptions *options,
-                                                      const GimpCoords *coords,
+                                                      GimpMultiStroke  *mstroke,
                                                       GimpPaintState    paint_state,
                                                       guint32           time);
 static void      gimp_paint_core_real_post_paint     (GimpPaintCore    *core,
@@ -231,7 +234,7 @@ static void
 gimp_paint_core_real_paint (GimpPaintCore    *core,
                             GimpDrawable     *drawable,
                             GimpPaintOptions *paint_options,
-                            const GimpCoords *coords,
+                            GimpMultiStroke  *mstroke,
                             GimpPaintState    paint_state,
                             guint32           time)
 {
@@ -304,6 +307,12 @@ gimp_paint_core_paint (GimpPaintCore    *core,
                              paint_options,
                              paint_state, time))
     {
+      GimpMultiStroke *mstroke;
+      GimpImage       *image;
+      GimpItem        *item;
+
+      item  = GIMP_ITEM (drawable);
+      image = gimp_item_get_image (item);
 
       if (paint_state == GIMP_PAINT_STATE_MOTION)
         {
@@ -312,10 +321,17 @@ gimp_paint_core_paint (GimpPaintCore    *core,
           core->last_paint.y = core->cur_coords.y;
         }
 
+      if (gimp_image_get_selected_multi_stroke (image))
+        mstroke = g_object_ref (gimp_image_get_selected_multi_stroke (image));
+      else
+        mstroke = g_object_ref (gimp_image_get_single_stroke (image));
+      gimp_multi_stroke_set_origin (mstroke, drawable, &core->cur_coords);
+
       core_class->paint (core, drawable,
                          paint_options,
-                         &core->cur_coords,
+                         mstroke,
                          paint_state, time);
+      g_object_unref (mstroke);
 
       core_class->post_paint (core, drawable,
                               paint_options,
@@ -818,8 +834,9 @@ gimp_paint_core_paste (GimpPaintCore            *core,
            */
           if (paint_mask != NULL)
             {
+              GimpTempBuf *modified_mask     = gimp_temp_buf_copy (paint_mask);
               GeglBuffer *paint_mask_buffer =
-                gimp_temp_buf_create_buffer ((GimpTempBuf *) paint_mask);
+                gimp_temp_buf_create_buffer ((GimpTempBuf *) modified_mask);
 
               gimp_gegl_combine_mask_weird (paint_mask_buffer,
                                             GEGL_RECTANGLE (paint_mask_offset_x,
@@ -833,6 +850,7 @@ gimp_paint_core_paste (GimpPaintCore            *core,
                                             GIMP_IS_AIRBRUSH (core));
 
               g_object_unref (paint_mask_buffer);
+              gimp_temp_buf_unref (modified_mask);
             }
 
           gimp_gegl_apply_mask (core->canvas_buffer,

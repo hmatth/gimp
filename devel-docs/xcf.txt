@@ -747,6 +747,24 @@ PROP_GUIDES (editing state)
   Some old XCF files define guides with negative coordinates; those
   should be ignored by readers.
 
+PROP_MULTI_STROKE (editing state)
+  uint32  33       Type identification
+  uint32  plength  Total length of the following payload in bytes
+                   (sum of mlength for all registered multi-strokes)
+  uint32  active   Index of the active multi-stroke, starting at 1
+                   (0 means none is active)
+  uint32  n        Number of multi-strokes that follow
+  ,--------------- Repeat for each registered multi-stroke:
+  | string type    name of multi-stroke
+  | ...    params  various parameters.
+                   Type and order depends on the
+                   gimp_multi_stroke_get_settings()
+  `--
+
+  PROP_MULTI_STROKE stores the existence and settings of any multi-stroke so
+  that the user do not lose them upon restart (for instance, if you are drawing
+  with a mirror, you want to find it precisely at the same place later).
+
 PROP_PATHS
   uint32  23       Type identification
   uint32  plength  Total length of the following payload in bytes

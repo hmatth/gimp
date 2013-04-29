@@ -48,7 +48,7 @@ struct _GimpCanvasGuidePrivate
 {
   GimpOrientationType orientation;
   gint                position;
-  gboolean            guide_style;
+  GimpGuideStyle      guide_style;
 };
 
 #define GET_PRIVATE(guide) \
@@ -105,10 +105,10 @@ gimp_canvas_guide_class_init (GimpCanvasGuideClass *klass)
                                                      GIMP_PARAM_READWRITE));
 
   g_object_class_install_property (object_class, PROP_GUIDE_STYLE,
-                                   g_param_spec_boolean ("guide-style",
-                                                         NULL, NULL,
-                                                         FALSE,
-                                                         GIMP_PARAM_READWRITE));
+                                   g_param_spec_enum ("guide-style", NULL, NULL,
+                                                      GIMP_TYPE_GUIDE_STYLE,
+                                                      GIMP_GUIDE_STYLE_NONE,
+                                                      GIMP_PARAM_READWRITE));
 
   g_type_class_add_private (klass, sizeof (GimpCanvasGuidePrivate));
 }
@@ -135,7 +135,7 @@ gimp_canvas_guide_set_property (GObject      *object,
       private->position = g_value_get_int (value);
       break;
     case PROP_GUIDE_STYLE:
-      private->guide_style = g_value_get_boolean (value);
+      private->guide_style = g_value_get_enum (value);
       break;
 
     default:
@@ -161,7 +161,7 @@ gimp_canvas_guide_get_property (GObject    *object,
       g_value_set_int (value, private->position);
       break;
     case PROP_GUIDE_STYLE:
-      g_value_set_boolean (value, private->guide_style);
+      g_value_set_enum (value, private->guide_style);
       break;
 
     default:
@@ -247,9 +247,10 @@ gimp_canvas_guide_stroke (GimpCanvasItem *item,
 {
   GimpCanvasGuidePrivate *private = GET_PRIVATE (item);
 
-  if (private->guide_style)
+  if (private->guide_style != GIMP_GUIDE_STYLE_NONE)
     {
       gimp_canvas_set_guide_style (gimp_canvas_item_get_canvas (item), cr,
+                                   private->guide_style,
                                    gimp_canvas_item_get_highlight (item));
       cairo_stroke (cr);
     }
@@ -263,7 +264,7 @@ GimpCanvasItem *
 gimp_canvas_guide_new (GimpDisplayShell    *shell,
                        GimpOrientationType  orientation,
                        gint                 position,
-                       gboolean             guide_style)
+                       GimpGuideStyle       guide_style)
 {
   g_return_val_if_fail (GIMP_IS_DISPLAY_SHELL (shell), NULL);
 

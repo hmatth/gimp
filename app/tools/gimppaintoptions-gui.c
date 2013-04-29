@@ -24,8 +24,14 @@
 
 #include "tools-types.h"
 
+#include "config/gimpguiconfig.h"
+
+#include "core/gimp.h"
+#include "core/gimpimage.h"
 #include "core/gimptoolinfo.h"
 
+#include "paint/gimpmultistroke.h"
+#include "paint/gimpmultistroke-info.h"
 #include "paint/gimppaintoptions.h"
 
 #include "widgets/gimppropwidgets.h"
@@ -91,6 +97,17 @@ static GtkWidget * gimp_paint_options_gui_scale_with_buttons
                                                 gdouble       gamma,
                                                 GCallback     reset_callback,
                                                 GtkSizeGroup *link_group);
+
+static void
+     gimp_paint_options_multi_stroke_update_cb (GimpMultiStroke *mstroke,
+                                                GimpImage       *image,
+                                                GtkWidget       *frame);
+static void
+      gimp_paint_options_multi_stroke_callback (GimpPaintOptions *options,
+                                                GParamSpec       *pspec,
+                                                GtkWidget        *frame);
+static void gimp_paint_options_multi_stroke_ui (GimpMultiStroke *mstroke,
+                                                GtkWidget       *frame);
 
 
 /*  public functions  */
@@ -233,11 +250,64 @@ gimp_paint_options_gui (GimpToolOptions *tool_options)
       gtk_widget_show (frame);
     }
 
-  /*  the "smooth stroke" options  */
   if (g_type_is_a (tool_type, GIMP_TYPE_PAINT_TOOL))
     {
       GtkWidget *frame;
+      GimpGuiConfig *guiconfig;
 
+      guiconfig = GIMP_GUI_CONFIG (tool_options->tool_info->gimp->config);
+      if (guiconfig->playground_multi_stroke)
+        {
+          /* Multi-Stroke Painting */
+          GtkListStore *store;
+          GtkTreeIter   iter;
+          GList        *mstrokes;
+
+          store = gimp_int_store_new ();
+
+          mstrokes = gimp_multi_stroke_list ();
+          for (mstrokes = gimp_multi_stroke_list (); mstrokes; mstrokes = g_list_next (mstrokes))
+            {
+              GimpMultiStrokeClass *klass;
+              GType                 type;
+
+              type = (GType) mstrokes->data;
+              klass = g_type_class_ref (type);
+
+              gtk_list_store_prepend (store, &iter);
+              gtk_list_store_set (store, &iter,
+                                  GIMP_INT_STORE_LABEL,
+                                  klass->label,
+                                  GIMP_INT_STORE_VALUE,
+                                  mstrokes->data,
+                                  -1);
+              g_type_class_unref (klass);
+            }
+          gtk_list_store_prepend (store, &iter);
+          gtk_list_store_set (store, &iter,
+                              GIMP_INT_STORE_LABEL, _("None"),
+                              GIMP_INT_STORE_VALUE, G_TYPE_NONE,
+                              -1);
+          menu = gimp_prop_int_combo_box_new (config, "multi-stroke",
+                                              GIMP_INT_STORE (store));
+          g_object_unref (store);
+
+          gimp_int_combo_box_set_label (GIMP_INT_COMBO_BOX (menu), _("Multi-Stroke"));
+          gimp_int_combo_box_set_active (GIMP_INT_COMBO_BOX (menu), G_TYPE_NONE);
+          g_object_set (menu, "ellipsize", PANGO_ELLIPSIZE_END, NULL);
+
+          gtk_box_pack_start (GTK_BOX (vbox), menu, FALSE, FALSE, 0);
+          gtk_widget_show (menu);
+
+          frame = gimp_frame_new ("");
+          gtk_box_pack_start (GTK_BOX (vbox), frame, FALSE, FALSE, 0);
+          g_signal_connect (options, "notify::multi-stroke",
+                            G_CALLBACK (gimp_paint_options_multi_stroke_callback),
+                            frame);
+
+        }
+
+      /*  the "smooth stroke" options  */
       frame = smoothing_options_gui (options, tool_type);
       gtk_box_pack_start (GTK_BOX (vbox), frame, FALSE, FALSE, 0);
       gtk_widget_show (frame);
@@ -560,4 +630,161 @@ gimp_paint_options_gui_scale_with_buttons (GObject      *config,
                            _("Link to brush default"), NULL);
 
   return hbox;
+}
+
+static void
+gimp_paint_options_multi_stroke_update_cb (GimpMultiStroke *mstroke,
+                                           GimpImage       *image,
+                                           GtkWidget       *frame)
+{
+  GimpContext *context;
+
+  g_return_if_fail (GIMP_IS_MULTI_STROKE (mstroke));
+
+  context = gimp_get_user_context (mstroke->image->gimp);
+  if (image != context->image ||
+      mstroke != gimp_image_get_selected_multi_stroke (image))
+    {
+      g_signal_handlers_disconnect_by_func (G_OBJECT (mstroke),
+                                            gimp_paint_options_multi_stroke_update_cb,
+                                            frame);
+      return;
+    }
+
+  gimp_paint_options_multi_stroke_ui (mstroke, frame);
+}
+
+static void
+gimp_paint_options_multi_stroke_callback (GimpPaintOptions *options,
+                                          GParamSpec       *pspec,
+                                          GtkWidget        *frame)
+{
+  GimpMultiStroke      *mstroke = NULL;
+  GimpContext          *context;
+  GimpImage            *image;
+
+  g_return_if_fail (GIMP_IS_PAINT_OPTIONS (options));
+
+  context = gimp_get_user_context (GIMP_CONTEXT (options)->gimp);
+  image   = context->image;
+
+  if (image &&
+      (mstroke = gimp_image_get_selected_multi_stroke (image)))
+    {
+      g_signal_connect (mstroke, "update-ui",
+                        G_CALLBACK (gimp_paint_options_multi_stroke_update_cb),
+                        frame);
+    }
+
+  gimp_paint_options_multi_stroke_ui (mstroke, frame);
+}
+
+static void
+gimp_paint_options_multi_stroke_ui (GimpMultiStroke *mstroke,
+                                    GtkWidget       *frame)
+{
+  GimpMultiStrokeClass *klass;
+  GtkWidget            *vbox;
+  GParamSpec          **specs;
+  guint                 nproperties;
+  gint                  i;
+
+  /* Clean the old frame */
+  gtk_widget_hide (frame);
+  gtk_container_foreach (GTK_CONTAINER (frame),
+                         (GtkCallback) gtk_widget_destroy, NULL);
+
+  if (! mstroke)
+    return;
+
+  klass = g_type_class_ref (mstroke->type);
+  gtk_frame_set_label (GTK_FRAME (frame),
+                       klass->label);
+  g_type_class_unref (klass);
+
+  vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 2);
+  gtk_container_add (GTK_CONTAINER (frame), vbox);
+  gtk_widget_show (vbox);
+
+  specs = gimp_multi_stroke_get_settings (mstroke, &nproperties);
+
+  for (i = 0; i < (gint) nproperties; i++)
+    {
+      GParamSpec  *spec;
+      const gchar *name;
+      const gchar *blurb;
+
+      if (specs[i] == NULL)
+        {
+          GtkWidget *separator;
+
+          separator = gtk_hseparator_new ();
+          gtk_box_pack_start (GTK_BOX (vbox), separator,
+                              FALSE, FALSE, 0);
+          gtk_widget_show (separator);
+          continue;
+        }
+      spec = G_PARAM_SPEC (specs[i]);
+
+      name = g_param_spec_get_name (spec);
+      blurb = g_param_spec_get_blurb (spec);
+
+      switch (spec->value_type)
+        {
+        case G_TYPE_BOOLEAN:
+            {
+              GtkWidget *checkbox;
+
+              checkbox = gimp_prop_check_button_new (G_OBJECT (mstroke),
+                                                     name,
+                                                     blurb);
+              gtk_box_pack_start (GTK_BOX (vbox), checkbox,
+                                  FALSE, FALSE, 0);
+              gtk_widget_show (checkbox);
+            }
+          break;
+        case G_TYPE_DOUBLE:
+        case G_TYPE_INT:
+        case G_TYPE_UINT:
+            {
+              GtkWidget *scale;
+              gdouble    minimum;
+              gdouble    maximum;
+
+              if (spec->value_type == G_TYPE_DOUBLE)
+                {
+                  minimum = G_PARAM_SPEC_DOUBLE (spec)->minimum;
+                  maximum = G_PARAM_SPEC_DOUBLE (spec)->maximum;
+                }
+              else if (spec->value_type == G_TYPE_INT)
+                {
+                  minimum = G_PARAM_SPEC_INT (spec)->minimum;
+                  maximum = G_PARAM_SPEC_INT (spec)->maximum;
+                }
+              else
+                {
+                  minimum = G_PARAM_SPEC_UINT (spec)->minimum;
+                  maximum = G_PARAM_SPEC_UINT (spec)->maximum;
+                }
+
+              scale = gimp_prop_spin_scale_new (G_OBJECT (mstroke),
+                                                name, blurb,
+                                                1.0, 10.0, 1);
+              gimp_spin_scale_set_scale_limits (GIMP_SPIN_SCALE (scale),
+                                                minimum,
+                                                maximum);
+              gtk_box_pack_start (GTK_BOX (vbox), scale, TRUE, TRUE, 0);
+              gtk_widget_show (scale);
+            }
+          break;
+        default:
+          /* Type of parameter we haven't handled yet. */
+          continue;
+        }
+    }
+
+  g_free (specs);
+
+  /* Finally show the frame. */
+  gtk_widget_show (frame);
 }

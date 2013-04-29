@@ -93,7 +93,7 @@ struct _GimpPaintCoreClass
   void         (* paint)            (GimpPaintCore    *core,
                                      GimpDrawable     *drawable,
                                      GimpPaintOptions *paint_options,
-                                     const GimpCoords *coords,
+                                     GimpMultiStroke  *mstroke,
                                      GimpPaintState    paint_state,
                                      guint32           time);
   void         (* post_paint)       (GimpPaintCore    *core,

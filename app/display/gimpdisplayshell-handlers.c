@@ -32,6 +32,7 @@
 
 #include "core/gimp.h"
 #include "core/gimpguide.h"
+#include "core/gimpmirrorguide.h"
 #include "core/gimpimage.h"
 #include "core/gimpimage-grid.h"
 #include "core/gimpimage-guides.h"
@@ -638,7 +639,8 @@ gimp_display_shell_guide_add_handler (GimpImage        *image,
   item = gimp_canvas_guide_new (shell,
                                 gimp_guide_get_orientation (guide),
                                 gimp_guide_get_position (guide),
-                                TRUE);
+                                GIMP_IS_MIRROR_GUIDE (guide) ?
+                                GIMP_GUIDE_STYLE_MIRROR : GIMP_GUIDE_STYLE_NORMAL);
 
   gimp_canvas_proxy_group_add_item (group, guide, item);
   g_object_unref (item);

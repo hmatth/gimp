@@ -176,6 +176,7 @@ gimp_brush_cache_clear (GimpBrushCache *cache)
 
 gconstpointer
 gimp_brush_cache_get (GimpBrushCache *cache,
+                      GeglNode       *op,
                       gint            width,
                       gint            height,
                       gdouble         scale,
@@ -186,6 +187,7 @@ gimp_brush_cache_get (GimpBrushCache *cache,
   g_return_val_if_fail (GIMP_IS_BRUSH_CACHE (cache), NULL);
 
   if (cache->last_data                         &&
+      cache->last_op           == op           &&
       cache->last_width        == width        &&
       cache->last_height       == height       &&
       cache->last_scale        == scale        &&
@@ -208,6 +210,7 @@ gimp_brush_cache_get (GimpBrushCache *cache,
 void
 gimp_brush_cache_add (GimpBrushCache *cache,
                       gpointer        data,
+                      GeglNode       *op,
                       gint            width,
                       gint            height,
                       gdouble         scale,
@@ -225,6 +228,7 @@ gimp_brush_cache_add (GimpBrushCache *cache,
     cache->data_destroy (cache->last_data);
 
   cache->last_data         = data;
+  cache->last_op           = op;
   cache->last_width        = width;
   cache->last_height       = height;
   cache->last_scale        = scale;

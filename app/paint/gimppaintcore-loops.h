@@ -28,12 +28,12 @@ void canvas_buffer_to_paint_buf_alpha   (GimpTempBuf  *paint_buf,
                                          GeglBuffer   *canvas_buffer,
                                          gint          x_offset,
                                          gint          y_offset);
-
 void paint_mask_to_paint_buffer         (const GimpTempBuf  *paint_mask,
                                          gint                mask_x_offset,
                                          gint                mask_y_offset,
                                          GimpTempBuf        *paint_buf,
                                          gfloat              paint_opacity);
+
 
 void do_layer_blend                     (GeglBuffer  *src_buffer,
                                          GeglBuffer  *dst_buffer,

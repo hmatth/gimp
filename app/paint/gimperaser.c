@@ -29,6 +29,8 @@
 #include "core/gimpdynamics.h"
 #include "core/gimpimage.h"
 
+#include "gimpmultistroke.h"
+
 #include "gimperaser.h"
 #include "gimperaseroptions.h"
 
@@ -38,13 +40,13 @@
 static void   gimp_eraser_paint  (GimpPaintCore    *paint_core,
                                   GimpDrawable     *drawable,
                                   GimpPaintOptions *paint_options,
-                                  const GimpCoords *coords,
+                                  GimpMultiStroke  *mstroke,
                                   GimpPaintState    paint_state,
                                   guint32           time);
 static void   gimp_eraser_motion (GimpPaintCore    *paint_core,
                                   GimpDrawable     *drawable,
                                   GimpPaintOptions *paint_options,
-                                  const GimpCoords *coords);
+                                  GimpMultiStroke  *mstroke);
 
 
 G_DEFINE_TYPE (GimpEraser, gimp_eraser, GIMP_TYPE_BRUSH_CORE)
@@ -82,14 +84,14 @@ static void
 gimp_eraser_paint (GimpPaintCore    *paint_core,
                    GimpDrawable     *drawable,
                    GimpPaintOptions *paint_options,
-                   const GimpCoords *coords,
+                   GimpMultiStroke  *mstroke,
                    GimpPaintState    paint_state,
                    guint32           time)
 {
   switch (paint_state)
     {
     case GIMP_PAINT_STATE_MOTION:
-      gimp_eraser_motion (paint_core, drawable, paint_options, coords);
+      gimp_eraser_motion (paint_core, drawable, paint_options, mstroke);
       break;
 
     default:
@@ -101,7 +103,7 @@ static void
 gimp_eraser_motion (GimpPaintCore    *paint_core,
                     GimpDrawable     *drawable,
                     GimpPaintOptions *paint_options,
-                    const GimpCoords *coords)
+                    GimpMultiStroke  *mstroke)
 {
   GimpEraserOptions    *options  = GIMP_ERASER_OPTIONS (paint_options);
   GimpContext          *context  = GIMP_CONTEXT (paint_options);
@@ -116,30 +118,16 @@ gimp_eraser_motion (GimpPaintCore    *paint_core,
   GimpRGB               background;
   GeglColor            *color;
   gdouble               force;
+  const GimpCoords     *coords;
+  GeglNode             *op;
+  gint                  nstrokes;
+  gint                  i;
 
   fade_point = gimp_paint_options_get_fade (paint_options, image,
                                             paint_core->pixel_dist);
 
-  opacity = gimp_dynamics_get_linear_value (dynamics,
-                                            GIMP_DYNAMICS_OUTPUT_OPACITY,
-                                            coords,
-                                            paint_options,
-                                            fade_point);
-  if (opacity == 0.0)
-    return;
-
-  paint_buffer = gimp_paint_core_get_paint_buffer (paint_core, drawable,
-                                                   paint_options, coords,
-                                                   &paint_buffer_x,
-                                                   &paint_buffer_y);
-  if (! paint_buffer)
-    return;
-
   gimp_context_get_background (context, &background);
   color = gimp_gegl_color_new (&background);
-
-  gegl_buffer_set_color (paint_buffer, NULL, color);
-  g_object_unref (color);
 
   if (options->anti_erase)
     paint_mode = GIMP_ANTI_ERASE_MODE;
@@ -157,12 +145,41 @@ gimp_eraser_motion (GimpPaintCore    *paint_core,
   else
     force = paint_options->brush_force;
 
-  gimp_brush_core_paste_canvas (GIMP_BRUSH_CORE (paint_core), drawable,
-                                coords,
-                                MIN (opacity, GIMP_OPACITY_OPAQUE),
-                                gimp_context_get_opacity (context),
-                                paint_mode,
-                                gimp_paint_options_get_brush_mode (paint_options),
-                                force,
-                                paint_options->application_mode);
+  nstrokes = gimp_multi_stroke_get_size (mstroke);
+
+  for (i = 0; i < nstrokes; i++)
+    {
+      coords = gimp_multi_stroke_get_coords (mstroke, i);
+
+      opacity = gimp_dynamics_get_linear_value (dynamics,
+                                                GIMP_DYNAMICS_OUTPUT_OPACITY,
+                                                coords,
+                                                paint_options,
+                                                fade_point);
+      if (opacity == 0.0)
+        continue;
+
+      paint_buffer = gimp_paint_core_get_paint_buffer (paint_core, drawable,
+                                                       paint_options, coords,
+                                                       &paint_buffer_x,
+                                                       &paint_buffer_y);
+      if (! paint_buffer)
+        continue;
+
+      op = gimp_multi_stroke_get_operation (mstroke, paint_core,
+                                            paint_buffer, i);
+
+      gegl_buffer_set_color (paint_buffer, NULL, color);
+
+      gimp_brush_core_paste_canvas (GIMP_BRUSH_CORE (paint_core), drawable,
+                                    coords,
+                                    MIN (opacity, GIMP_OPACITY_OPAQUE),
+                                    gimp_context_get_opacity (context),
+                                    paint_mode,
+                                    gimp_paint_options_get_brush_mode (paint_options),
+                                    force,
+                                    paint_options->application_mode, op);
+    }
+
+  g_object_unref (color);
 }

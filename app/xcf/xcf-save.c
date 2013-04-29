@@ -47,9 +47,13 @@
 #include "core/gimpimage-sample-points.h"
 #include "core/gimplayer.h"
 #include "core/gimplayermask.h"
+#include "core/gimpmirrorguide.h"
 #include "core/gimpparasitelist.h"
 #include "core/gimpprogress.h"
 #include "core/gimpsamplepoint.h"
+
+#include "paint/gimpmultistroke.h"
+#include "paint/gimpmultistroke-info.h"
 
 #include "text/gimptextlayer.h"
 #include "text/gimptextlayer-xcf.h"
@@ -359,6 +363,10 @@ xcf_save_image_props (XcfInfo    *info,
   if (gimp_image_get_guides (image))
     xcf_check_error (xcf_save_prop (info, image, PROP_GUIDES, error,
                                     gimp_image_get_guides (image)));
+
+  if (gimp_image_get_multi_strokes (image))
+    xcf_check_error (xcf_save_prop (info, image, PROP_MULTI_STROKE, error,
+                                    gimp_image_get_multi_strokes (image)));
 
   if (gimp_image_get_sample_points (image))
     xcf_check_error (xcf_save_prop (info, image, PROP_SAMPLE_POINTS, error,
@@ -850,11 +858,18 @@ xcf_save_prop (XcfInfo    *info,
     case PROP_GUIDES:
       {
         GList *guides;
+        GList *iter;
         gint   n_guides;
 
         guides = va_arg (args, GList *);
         n_guides = g_list_length (guides);
 
+        for (iter = guides; iter; iter = g_list_next (iter))
+          {
+            /* Do not write down mirror guides here. */
+            if (GIMP_IS_MIRROR_GUIDE (iter->data))
+              n_guides--;
+          }
         size = n_guides * (4 + 1);
 
         xcf_write_prop_type_check_error (info, prop_type);
@@ -865,6 +880,9 @@ xcf_save_prop (XcfInfo    *info,
             GimpGuide *guide    = guides->data;
             gint32     position = gimp_guide_get_position (guide);
             gint8      orientation;
+
+            if (GIMP_IS_MIRROR_GUIDE (guide))
+              continue;
 
             switch (gimp_guide_get_orientation (guide))
               {
@@ -885,6 +903,163 @@ xcf_save_prop (XcfInfo    *info,
             xcf_write_int32_check_error (info, (guint32 *) &position,    1);
             xcf_write_int8_check_error  (info, (guint8 *)  &orientation, 1);
           }
+      }
+      break;
+
+    case PROP_MULTI_STROKE:
+      {
+        GList            *mstrokes;
+        GList            *iter;
+        GimpMultiStroke  *mstroke;
+        GParamSpec      **settings;
+        GParamSpec       *spec;
+        guint             nsettings;
+        guint32           base;
+        glong             pos;
+        gint              i = 0;
+
+        xcf_write_prop_type_check_error (info, prop_type);
+        /* because we don't know how much room the Multi-Stroke list
+         * will take we save the file position and write the length
+         * later.
+         */
+        pos = info->cp;
+        size = 0;
+        xcf_write_int32_check_error (info, &size, 1);
+        base = info->cp;
+
+        mstrokes = va_arg (args, GList *);
+
+        /* Index of active multi-stroke, starting at 1
+         * (because 0 means none active) */
+        if (gimp_image_get_selected_multi_stroke (image))
+          {
+            for (i = 1, iter = mstrokes; iter; iter = g_list_next (iter), i++)
+              {
+                mstroke = GIMP_MULTI_STROKE (iter->data);
+                if (mstroke == gimp_image_get_selected_multi_stroke (image))
+                  break;
+              }
+          }
+        xcf_write_int32_check_error (info, (guint32 *)  &i, 1);
+        /* Number of multi-strokes that follows. */
+        i = g_list_length (mstrokes);
+        xcf_write_int32_check_error (info, (guint32 *)  &i, 1);
+
+        for (iter = mstrokes; iter; iter = g_list_next (iter))
+          {
+            const gchar *name;
+
+            mstroke = GIMP_MULTI_STROKE (iter->data);
+
+            name = g_type_name (mstroke->type);
+            xcf_write_string_check_error (info, (gchar **) &name, 1);
+
+            settings = gimp_multi_stroke_get_xcf_settings (mstroke,
+                                                           &nsettings);
+
+            for (i = 0; i < nsettings; i++)
+              {
+                if (settings[i] == NULL)
+                  continue;
+
+                spec = settings[i];
+
+                switch (spec->value_type)
+                  {
+                  case G_TYPE_BOOLEAN:
+                      {
+                        gboolean value;
+                        guint8   uint_value;
+
+                        g_object_get (mstroke,
+                                      g_param_spec_get_name (spec),
+                                      &value,
+                                      NULL);
+                        uint_value = (guint8) value;
+                        xcf_write_int8_check_error (info, &uint_value, 1);
+                      }
+                    break;
+                  case G_TYPE_FLOAT:
+                      {
+                        gfloat value;
+
+                        g_object_get (mstroke,
+                                      g_param_spec_get_name (spec),
+                                      &value,
+                                      NULL);
+                        xcf_write_float_check_error (info, &value, 1);
+                      }
+                    break;
+                  case G_TYPE_DOUBLE:
+                      {
+                        gdouble value;
+                        gfloat  float_value;
+
+                        g_object_get (mstroke,
+                                      g_param_spec_get_name (spec),
+                                      &value,
+                                      NULL);
+                        float_value = (gfloat) value;
+                        xcf_write_float_check_error (info, &float_value, 1);
+                      }
+                    break;
+                  case G_TYPE_UINT:
+                      {
+                        guint   value;
+                        guint32 uint_value;
+
+                        g_object_get (mstroke,
+                                      g_param_spec_get_name (spec),
+                                      &value,
+                                      NULL);
+                        uint_value = (guint32) value;
+                        xcf_write_int32_check_error (info, &uint_value, 1);
+                      }
+                    break;
+                  case G_TYPE_INT:
+                      {
+                        gint    value;
+                        guint32 uint_value;
+
+                        g_object_get (mstroke,
+                                      g_param_spec_get_name (spec),
+                                      &value,
+                                      NULL);
+                        uint_value = (guint32) value;
+                        xcf_write_int32_check_error (info, &uint_value, 1);
+                      }
+                    break;
+                  case G_TYPE_STRING:
+                      {
+                        gchar* value;
+
+                        g_object_get (mstroke,
+                                      g_param_spec_get_name (spec),
+                                      &value,
+                                      NULL);
+                        xcf_write_string_check_error (info, &value, 1);
+                        g_free (value);
+                      }
+                    break;
+                  default:
+                    /* We don't handle this settings. */
+                    gimp_message (info->gimp, G_OBJECT (info->progress),
+                                  GIMP_MESSAGE_ERROR,
+                                  "Unknown settings '%s' for '%s'",
+                                  name, g_param_spec_get_name (spec));
+                    return FALSE;
+                  }
+              }
+          }
+
+        size = info->cp - base;
+
+        /* go back to the saved position and write the length */
+        xcf_check_error (xcf_seek_pos (info, pos, error));
+        xcf_write_int32_check_error (info, &size, 1);
+
+        xcf_check_error (xcf_seek_pos (info, base + size, error));
       }
       break;
 
