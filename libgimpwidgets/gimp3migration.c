@@ -185,6 +185,8 @@ gtk_widget_get_modifier_mask (GtkWidget         *widget,
 
 #endif /* GTK+ 3.3 */
 
+#if 0
+
 gboolean
 gdk_cairo_get_clip_rectangle (cairo_t      *cr,
                               GdkRectangle *rect)
@@ -219,3 +221,5 @@ gdk_screen_get_monitor_workarea (GdkScreen    *screen,
 {
   gdk_screen_get_monitor_geometry (screen, monitor_num, dest);
 }
+
+#endif
