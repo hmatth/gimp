@@ -247,7 +247,7 @@ gimp_clone_motion (GimpSourceCore   *source_core,
                                 source_options->align_mode ==
                                 GIMP_SOURCE_ALIGN_FIXED ?
                                 GIMP_PAINT_INCREMENTAL : GIMP_PAINT_CONSTANT,
-                                op);
+                                NULL);
 }
 
 static gboolean
