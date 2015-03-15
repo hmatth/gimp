@@ -45,9 +45,6 @@ struct _GimpMirrorGuide
 struct _GimpMirrorGuideClass
 {
   GimpGuideClass    parent_class;
-
-  /*  signals  */
-  void (* removed)  (GimpMirrorGuide  *mirror_guide);
 };
 
 
