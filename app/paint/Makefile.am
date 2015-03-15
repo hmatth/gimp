@@ -89,7 +89,9 @@ libapppaint_a_sources = \
 	gimpsourcecore.c		\
 	gimpsourcecore.h		\
 	gimpsourceoptions.c		\
-	gimpsourceoptions.h
+	gimpsourceoptions.h		\
+	gimptiling.c			\
+	gimptiling.h
 
 libapppaint_a_built_sources = paint-enums.c
 

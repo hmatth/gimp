@@ -45,6 +45,7 @@ typedef struct _GimpSmudge           GimpSmudge;
 /* Multi-stroke transformations */
 typedef struct _GimpMultiStroke      GimpMultiStroke;
 typedef struct _GimpMirror           GimpMirror;
+typedef struct _GimpTiling           GimpTiling;
 
 /*  paint options  */
 

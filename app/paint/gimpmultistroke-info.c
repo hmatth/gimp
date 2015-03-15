@@ -28,6 +28,7 @@
 #include "gimpmirror.h"
 #include "gimpmultistroke.h"
 #include "gimpmultistroke-info.h"
+#include "gimptiling.h"
 
 GList *
 gimp_multi_stroke_list (void)
@@ -35,6 +36,7 @@ gimp_multi_stroke_list (void)
   GList *list = NULL;
 
   list = g_list_prepend (list, GINT_TO_POINTER (GIMP_TYPE_MIRROR));
+  list = g_list_prepend (list, GINT_TO_POINTER (GIMP_TYPE_TILING));
   return list;
 }
 
