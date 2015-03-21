@@ -45,6 +45,7 @@
 #include "core/gimpimage-metadata.h"
 #include "core/gimpimage-private.h"
 #include "core/gimpimage-sample-points.h"
+#include "core/gimpimage-symmetry.h"
 #include "core/gimpimage-undo.h"
 #include "core/gimpitemstack.h"
 #include "core/gimplayer-floating-sel.h"
@@ -53,10 +54,8 @@
 #include "core/gimpparasitelist.h"
 #include "core/gimpprogress.h"
 #include "core/gimpselection.h"
+#include "core/gimpsymmetry.h"
 #include "core/gimptemplate.h"
-
-#include "paint/gimpmultistroke.h"
-#include "paint/gimpmultistroke-info.h"
 
 #include "text/gimptextlayer.h"
 #include "text/gimptextlayer-xcf.h"
@@ -728,42 +727,42 @@ xcf_load_image_props (XcfInfo   *info,
           }
           break;
 
-        case PROP_MULTI_STROKE:
+        case PROP_SYMMETRY:
             {
-              GimpMultiStroke *mstroke;
-              GimpMultiStroke *active_mstroke = NULL;
-              gint32           active;
-              gint32           n_mstrokes;
-              gchar           *name;
-              GType            type;
-              GParamSpec     **settings;
-              GParamSpec      *spec;
-              guint            nsettings;
-              gint             i, j;
+              GimpSymmetry  *sym;
+              GimpSymmetry  *active_sym = NULL;
+              gint32         active;
+              gint32         n_syms;
+              gchar         *name;
+              GType          type;
+              GParamSpec   **settings;
+              GParamSpec    *spec;
+              guint          nsettings;
+              gint           i, j;
 
               info->cp += xcf_read_int32 (info->input,
                                           (guint32 *) &active, 1);
               info->cp += xcf_read_int32 (info->input,
-                                          (guint32 *) &n_mstrokes, 1);
-              for (i = 1; i <= n_mstrokes; i++)
+                                          (guint32 *) &n_syms, 1);
+              for (i = 1; i <= n_syms; i++)
                 {
                   info->cp += xcf_read_string (info->input, &name, 1);
                   type = g_type_from_name (name);
-                  if (! type || ! g_type_is_a (type, GIMP_TYPE_MULTI_STROKE))
+                  if (! type || ! g_type_is_a (type, GIMP_TYPE_SYMMETRY))
                     {
                       gimp_message (info->gimp, G_OBJECT (info->progress),
                                     GIMP_MESSAGE_ERROR,
-                                    "Unknown Multi-Stroke: %s",
+                                    "Unknown Symmetry: %s",
                                     name);
                       g_free (name);
                       return FALSE;
                     }
-                  mstroke = gimp_multi_stroke_new (type, image);
-                  gimp_image_add_multi_stroke (image, mstroke);
-                  g_object_unref (mstroke);
+                  sym = gimp_image_symmetry_new (image, type);
+                  gimp_image_add_symmetry (image, sym);
+                  g_object_unref (sym);
 
-                  settings = gimp_multi_stroke_get_xcf_settings (mstroke,
-                                                                 &nsettings);
+                  settings = gimp_symmetry_get_xcf_settings (sym,
+                                                             &nsettings);
                   for (j = 0; j < nsettings; j++)
                     {
                       if (settings[j] == NULL)
@@ -778,7 +777,7 @@ xcf_load_image_props (XcfInfo   *info,
 
                               info->cp += xcf_read_int8 (info->input,
                                                          &value, 1);
-                              g_object_set (mstroke,
+                              g_object_set (sym,
                                             g_param_spec_get_name (spec),
                                             (gboolean) value,
                                             NULL);
@@ -791,7 +790,7 @@ xcf_load_image_props (XcfInfo   *info,
 
                               info->cp += xcf_read_float (info->input,
                                                           &value, 1);
-                              g_object_set (mstroke,
+                              g_object_set (sym,
                                             g_param_spec_get_name (spec),
                                             (spec->value_type == G_TYPE_FLOAT) ?
                                             value : (gdouble) value,
@@ -804,7 +803,7 @@ xcf_load_image_props (XcfInfo   *info,
 
                               info->cp += xcf_read_int32 (info->input,
                                                           &value, 1);
-                              g_object_set (mstroke,
+                              g_object_set (sym,
                                             g_param_spec_get_name (spec),
                                             (guint) value,
                                             NULL);
@@ -816,7 +815,7 @@ xcf_load_image_props (XcfInfo   *info,
 
                               info->cp += xcf_read_int32 (info->input,
                                                           &value, 1);
-                              g_object_set (mstroke,
+                              g_object_set (sym,
                                             g_param_spec_get_name (spec),
                                             (gint) value,
                                             NULL);
@@ -828,7 +827,7 @@ xcf_load_image_props (XcfInfo   *info,
 
                               info->cp += xcf_read_string (info->input,
                                                            &value, 1);
-                              g_object_set (mstroke,
+                              g_object_set (sym,
                                             g_param_spec_get_name (spec),
                                             value,
                                             NULL);
@@ -848,9 +847,9 @@ xcf_load_image_props (XcfInfo   *info,
                   g_free (settings);
 
                   if (active == i)
-                    active_mstroke = mstroke;
+                    active_sym = sym;
                 }
-              gimp_image_select_multi_stroke (image, active_mstroke->type);
+              gimp_image_select_symmetry (image, active_sym->type);
               g_free (name);
             }
           break;

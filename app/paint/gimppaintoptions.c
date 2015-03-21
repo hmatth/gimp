@@ -29,13 +29,12 @@
 #include "core/gimp.h"
 #include "core/gimpbrushgenerated.h"
 #include "core/gimpimage.h"
+#include "core/gimpimage-symmetry.h"
 #include "core/gimpdynamics.h"
 #include "core/gimpdynamicsoutput.h"
 #include "core/gimpgradient.h"
 #include "core/gimppaintinfo.h"
-
-#include "gimpmultistroke.h"
-#include "gimpmultistroke-info.h"
+#include "core/gimpsymmetry.h"
 
 #include "gimppaintoptions.h"
 
@@ -132,7 +131,7 @@ enum
   PROP_BRUSH_LINK_SPACING,
   PROP_BRUSH_LINK_HARDNESS,
 
-  PROP_MULTI_STROKE
+  PROP_SYMMETRY
 };
 
 
@@ -371,8 +370,8 @@ gimp_paint_options_class_init (GimpPaintOptionsClass *klass)
                                     * instablility */
                                    GIMP_PARAM_STATIC_STRINGS);
 
-  GIMP_CONFIG_INSTALL_PROP_INT (object_class, PROP_MULTI_STROKE,
-                                "multi-stroke", _("Multi Stroke transformation"),
+  GIMP_CONFIG_INSTALL_PROP_INT (object_class, PROP_SYMMETRY,
+                                "symmetry", _("Symmetry"),
                                 G_TYPE_NONE, INT_MAX, G_TYPE_NONE,
                                 GIMP_PARAM_STATIC_STRINGS);
 }
@@ -583,25 +582,25 @@ gimp_paint_options_set_property (GObject      *object,
       smoothing_options->smoothing_factor = g_value_get_double (value);
       break;
 
-    case PROP_MULTI_STROKE:
-      options->multi_stroke = g_value_get_int (value);
+    case PROP_SYMMETRY:
+      options->symmetry = g_value_get_int (value);
       if (context && context->image)
         {
-          if (! gimp_image_select_multi_stroke (context->image,
-                                                options->multi_stroke))
+          if (! gimp_image_select_symmetry (context->image,
+                                            options->symmetry))
             {
-              GimpMultiStroke *mstroke;
+              GimpSymmetry *mstroke;
 
-              mstroke  = gimp_multi_stroke_new (options->multi_stroke,
-                                                context->image);
-              gimp_image_add_multi_stroke (context->image,
-                                           GIMP_MULTI_STROKE (mstroke));
+              mstroke  = gimp_image_symmetry_new (context->image,
+                                                  options->symmetry);
+              gimp_image_add_symmetry (context->image,
+                                       GIMP_SYMMETRY (mstroke));
               g_object_unref (mstroke);
             }
         }
       else
         {
-          options->multi_stroke = G_TYPE_NONE;
+          options->symmetry = G_TYPE_NONE;
         }
       break;
 
@@ -765,8 +764,8 @@ gimp_paint_options_get_property (GObject    *object,
       g_value_set_double (value, smoothing_options->smoothing_factor);
       break;
 
-    case PROP_MULTI_STROKE:
-      g_value_set_int (value, options->multi_stroke);
+    case PROP_SYMMETRY:
+      g_value_set_int (value, options->symmetry);
       break;
 
     default:
@@ -1154,7 +1153,7 @@ gimp_paint_options_copy_gradient_props (GimpPaintOptions *src,
 
 /**
  * Update the paint options of the current tool according to image settings.
- * Multi-Stroke settings are actually attached to an image, and therefore
+ * Symmetry settings are actually attached to an image, and therefore
  * depends on the current context image.
  */
 void
@@ -1172,12 +1171,12 @@ gimp_paint_options_set_mstroke_props (GimpPaintOptions *src,
 
   if (image)
     {
-      GimpMultiStroke  *mstroke;
+      GimpSymmetry  *mstroke;
 
-      mstroke = gimp_image_get_selected_multi_stroke (image);
+      mstroke = gimp_image_get_selected_symmetry (image);
 
       g_object_set (dest,
-                    "multi-stroke",
+                    "symmetry",
                     mstroke ? mstroke->type : G_TYPE_NONE,
                     NULL);
     }

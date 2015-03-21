@@ -35,9 +35,8 @@
 #include "core/gimpdynamics.h"
 #include "core/gimpgradient.h"
 #include "core/gimpimage.h"
+#include "core/gimpsymmetry.h"
 #include "core/gimptempbuf.h"
-
-#include "gimpmultistroke.h"
 
 #include "gimppaintbrush.h"
 #include "gimppaintoptions.h"
@@ -48,7 +47,7 @@
 static void   gimp_paintbrush_paint (GimpPaintCore    *paint_core,
                                      GimpDrawable     *drawable,
                                      GimpPaintOptions *paint_options,
-                                     GimpMultiStroke  *mstroke,
+                                     GimpSymmetry     *sym,
                                      GimpPaintState    paint_state,
                                      guint32           time);
 
@@ -88,7 +87,7 @@ static void
 gimp_paintbrush_paint (GimpPaintCore    *paint_core,
                        GimpDrawable     *drawable,
                        GimpPaintOptions *paint_options,
-                       GimpMultiStroke  *mstroke,
+                       GimpSymmetry     *sym,
                        GimpPaintState    paint_state,
                        guint32           time)
 {
@@ -96,7 +95,7 @@ gimp_paintbrush_paint (GimpPaintCore    *paint_core,
     {
     case GIMP_PAINT_STATE_MOTION:
       _gimp_paintbrush_motion (paint_core, drawable, paint_options,
-                               mstroke, GIMP_OPACITY_OPAQUE);
+                               sym, GIMP_OPACITY_OPAQUE);
       break;
 
     default:
@@ -108,7 +107,7 @@ void
 _gimp_paintbrush_motion (GimpPaintCore    *paint_core,
                          GimpDrawable     *drawable,
                          GimpPaintOptions *paint_options,
-                         GimpMultiStroke  *mstroke,
+                         GimpSymmetry     *sym,
                          gdouble           opacity)
 {
   GimpBrushCore            *brush_core = GIMP_BRUSH_CORE (paint_core);
@@ -130,12 +129,12 @@ _gimp_paintbrush_motion (GimpPaintCore    *paint_core,
 
   image = gimp_item_get_image (GIMP_ITEM (drawable));
 
-  nstrokes = gimp_multi_stroke_get_size (mstroke);
+  nstrokes = gimp_symmetry_get_size (sym);
 
   fade_point = gimp_paint_options_get_fade (paint_options, image,
                                             paint_core->pixel_dist);
 
-  coords = gimp_multi_stroke_get_origin (mstroke);
+  coords = gimp_symmetry_get_origin (sym);
   /* Some settings are based on the original stroke. */
   opacity *= gimp_dynamics_get_linear_value (dynamics,
                                              GIMP_DYNAMICS_OUTPUT_OPACITY,
@@ -157,7 +156,7 @@ _gimp_paintbrush_motion (GimpPaintCore    *paint_core,
     {
       gint paint_width, paint_height;
 
-      coords = gimp_multi_stroke_get_coords (mstroke, i);
+      coords = gimp_symmetry_get_coords (sym, i);
 
       paint_buffer = gimp_paint_core_get_paint_buffer (paint_core, drawable,
                                                        paint_options, coords,
@@ -168,9 +167,9 @@ _gimp_paintbrush_motion (GimpPaintCore    *paint_core,
       if (! paint_buffer)
         continue;
 
-      op = gimp_multi_stroke_get_operation (mstroke, i,
-                                            paint_width,
-                                            paint_height);
+      op = gimp_symmetry_get_operation (sym, i,
+                                        paint_width,
+                                        paint_height);
       if (gimp_paint_options_get_gradient_color (paint_options, image,
                                                  grad_point,
                                                  paint_core->pixel_dist,

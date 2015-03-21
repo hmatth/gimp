@@ -28,10 +28,10 @@
 
 #include "core/gimp.h"
 #include "core/gimpimage.h"
+#include "core/gimpimage-symmetry.h"
+#include "core/gimpsymmetry.h"
 #include "core/gimptoolinfo.h"
 
-#include "paint/gimpmultistroke.h"
-#include "paint/gimpmultistroke-info.h"
 #include "paint/gimppaintoptions.h"
 
 #include "widgets/gimppropwidgets.h"
@@ -99,15 +99,15 @@ static GtkWidget * gimp_paint_options_gui_scale_with_buttons
                                                 GtkSizeGroup *link_group);
 
 static void
-     gimp_paint_options_multi_stroke_update_cb (GimpMultiStroke *mstroke,
-                                                GimpImage       *image,
-                                                GtkWidget       *frame);
+         gimp_paint_options_symmetry_update_cb (GimpSymmetry     *sym,
+                                                GimpImage        *image,
+                                                GtkWidget        *frame);
 static void
-      gimp_paint_options_multi_stroke_callback (GimpPaintOptions *options,
+          gimp_paint_options_symmetry_callback (GimpPaintOptions *options,
                                                 GParamSpec       *pspec,
                                                 GtkWidget        *frame);
-static void gimp_paint_options_multi_stroke_ui (GimpMultiStroke *mstroke,
-                                                GtkWidget       *frame);
+static void     gimp_paint_options_symmetry_ui (GimpSymmetry     *sym,
+                                                GtkWidget        *frame);
 
 
 /*  public functions  */
@@ -256,22 +256,22 @@ gimp_paint_options_gui (GimpToolOptions *tool_options)
       GimpGuiConfig *guiconfig;
 
       guiconfig = GIMP_GUI_CONFIG (tool_options->tool_info->gimp->config);
-      if (guiconfig->playground_multi_stroke)
+      if (guiconfig->playground_symmetry)
         {
-          /* Multi-Stroke Painting */
+          /* Symmetry Painting */
           GtkListStore *store;
           GtkTreeIter   iter;
-          GList        *mstrokes;
+          GList        *syms;
 
           store = gimp_int_store_new ();
 
-          mstrokes = gimp_multi_stroke_list ();
-          for (mstrokes = gimp_multi_stroke_list (); mstrokes; mstrokes = g_list_next (mstrokes))
+          syms = gimp_image_symmetry_list ();
+          for (syms = gimp_image_symmetry_list (); syms; syms = g_list_next (syms))
             {
-              GimpMultiStrokeClass *klass;
+              GimpSymmetryClass *klass;
               GType                 type;
 
-              type = (GType) mstrokes->data;
+              type = (GType) syms->data;
               klass = g_type_class_ref (type);
 
               gtk_list_store_prepend (store, &iter);
@@ -279,7 +279,7 @@ gimp_paint_options_gui (GimpToolOptions *tool_options)
                                   GIMP_INT_STORE_LABEL,
                                   klass->label,
                                   GIMP_INT_STORE_VALUE,
-                                  mstrokes->data,
+                                  syms->data,
                                   -1);
               g_type_class_unref (klass);
             }
@@ -288,11 +288,11 @@ gimp_paint_options_gui (GimpToolOptions *tool_options)
                               GIMP_INT_STORE_LABEL, _("None"),
                               GIMP_INT_STORE_VALUE, G_TYPE_NONE,
                               -1);
-          menu = gimp_prop_int_combo_box_new (config, "multi-stroke",
+          menu = gimp_prop_int_combo_box_new (config, "symmetry",
                                               GIMP_INT_STORE (store));
           g_object_unref (store);
 
-          gimp_int_combo_box_set_label (GIMP_INT_COMBO_BOX (menu), _("Multi-Stroke"));
+          gimp_int_combo_box_set_label (GIMP_INT_COMBO_BOX (menu), _("Symmetry"));
           gimp_int_combo_box_set_active (GIMP_INT_COMBO_BOX (menu), G_TYPE_NONE);
           g_object_set (menu, "ellipsize", PANGO_ELLIPSIZE_END, NULL);
 
@@ -301,8 +301,8 @@ gimp_paint_options_gui (GimpToolOptions *tool_options)
 
           frame = gimp_frame_new ("");
           gtk_box_pack_start (GTK_BOX (vbox), frame, FALSE, FALSE, 0);
-          g_signal_connect (options, "notify::multi-stroke",
-                            G_CALLBACK (gimp_paint_options_multi_stroke_callback),
+          g_signal_connect (options, "notify::symmetry",
+                            G_CALLBACK (gimp_paint_options_symmetry_callback),
                             frame);
 
         }
@@ -633,35 +633,35 @@ gimp_paint_options_gui_scale_with_buttons (GObject      *config,
 }
 
 static void
-gimp_paint_options_multi_stroke_update_cb (GimpMultiStroke *mstroke,
-                                           GimpImage       *image,
-                                           GtkWidget       *frame)
+gimp_paint_options_symmetry_update_cb (GimpSymmetry *sym,
+                                       GimpImage    *image,
+                                       GtkWidget    *frame)
 {
   GimpContext *context;
 
-  g_return_if_fail (GIMP_IS_MULTI_STROKE (mstroke));
+  g_return_if_fail (GIMP_IS_SYMMETRY (sym));
 
-  context = gimp_get_user_context (mstroke->image->gimp);
+  context = gimp_get_user_context (sym->image->gimp);
   if (image != context->image ||
-      mstroke != gimp_image_get_selected_multi_stroke (image))
+      sym != gimp_image_get_selected_symmetry (image))
     {
-      g_signal_handlers_disconnect_by_func (G_OBJECT (mstroke),
-                                            gimp_paint_options_multi_stroke_update_cb,
+      g_signal_handlers_disconnect_by_func (G_OBJECT (sym),
+                                            gimp_paint_options_symmetry_update_cb,
                                             frame);
       return;
     }
 
-  gimp_paint_options_multi_stroke_ui (mstroke, frame);
+  gimp_paint_options_symmetry_ui (sym, frame);
 }
 
 static void
-gimp_paint_options_multi_stroke_callback (GimpPaintOptions *options,
-                                          GParamSpec       *pspec,
-                                          GtkWidget        *frame)
+gimp_paint_options_symmetry_callback (GimpPaintOptions *options,
+                                      GParamSpec       *pspec,
+                                      GtkWidget        *frame)
 {
-  GimpMultiStroke      *mstroke = NULL;
-  GimpContext          *context;
-  GimpImage            *image;
+  GimpSymmetry *sym = NULL;
+  GimpContext  *context;
+  GimpImage    *image;
 
   g_return_if_fail (GIMP_IS_PAINT_OPTIONS (options));
 
@@ -669,35 +669,35 @@ gimp_paint_options_multi_stroke_callback (GimpPaintOptions *options,
   image   = context->image;
 
   if (image &&
-      (mstroke = gimp_image_get_selected_multi_stroke (image)))
+      (sym = gimp_image_get_selected_symmetry (image)))
     {
-      g_signal_connect (mstroke, "update-ui",
-                        G_CALLBACK (gimp_paint_options_multi_stroke_update_cb),
+      g_signal_connect (sym, "update-ui",
+                        G_CALLBACK (gimp_paint_options_symmetry_update_cb),
                         frame);
     }
 
-  gimp_paint_options_multi_stroke_ui (mstroke, frame);
+  gimp_paint_options_symmetry_ui (sym, frame);
 }
 
 static void
-gimp_paint_options_multi_stroke_ui (GimpMultiStroke *mstroke,
-                                    GtkWidget       *frame)
+gimp_paint_options_symmetry_ui (GimpSymmetry *sym,
+                                GtkWidget    *frame)
 {
-  GimpMultiStrokeClass *klass;
-  GtkWidget            *vbox;
-  GParamSpec          **specs;
-  guint                 nproperties;
-  gint                  i;
+  GimpSymmetryClass  *klass;
+  GtkWidget          *vbox;
+  GParamSpec        **specs;
+  guint               nproperties;
+  gint                i;
 
   /* Clean the old frame */
   gtk_widget_hide (frame);
   gtk_container_foreach (GTK_CONTAINER (frame),
                          (GtkCallback) gtk_widget_destroy, NULL);
 
-  if (! mstroke)
+  if (! sym)
     return;
 
-  klass = g_type_class_ref (mstroke->type);
+  klass = g_type_class_ref (sym->type);
   gtk_frame_set_label (GTK_FRAME (frame),
                        klass->label);
   g_type_class_unref (klass);
@@ -706,7 +706,7 @@ gimp_paint_options_multi_stroke_ui (GimpMultiStroke *mstroke,
   gtk_container_add (GTK_CONTAINER (frame), vbox);
   gtk_widget_show (vbox);
 
-  specs = gimp_multi_stroke_get_settings (mstroke, &nproperties);
+  specs = gimp_symmetry_get_settings (sym, &nproperties);
 
   for (i = 0; i < (gint) nproperties; i++)
     {
@@ -735,7 +735,7 @@ gimp_paint_options_multi_stroke_ui (GimpMultiStroke *mstroke,
             {
               GtkWidget *checkbox;
 
-              checkbox = gimp_prop_check_button_new (G_OBJECT (mstroke),
+              checkbox = gimp_prop_check_button_new (G_OBJECT (sym),
                                                      name,
                                                      blurb);
               gtk_box_pack_start (GTK_BOX (vbox), checkbox,
@@ -767,7 +767,7 @@ gimp_paint_options_multi_stroke_ui (GimpMultiStroke *mstroke,
                   maximum = G_PARAM_SPEC_UINT (spec)->maximum;
                 }
 
-              scale = gimp_prop_spin_scale_new (G_OBJECT (mstroke),
+              scale = gimp_prop_spin_scale_new (G_OBJECT (sym),
                                                 name, blurb,
                                                 1.0, 10.0, 1);
               gimp_spin_scale_set_scale_limits (GIMP_SPIN_SCALE (scale),

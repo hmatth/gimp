@@ -82,9 +82,9 @@ enum
 
   PROP_PLAYGROUND_NPD_TOOL,
   PROP_PLAYGROUND_HANDLE_TRANSFORM_TOOL,
-  PROP_PLAYGROUND_MULTI_STROKE,
   PROP_PLAYGROUND_MYBRUSH_TOOL,
   PROP_PLAYGROUND_SEAMLESS_CLONE_TOOL,
+  PROP_PLAYGROUND_SYMMETRY,
 
   PROP_HIDE_DOCKS,
   PROP_SINGLE_WINDOW_MODE,
@@ -292,9 +292,9 @@ gimp_gui_config_class_init (GimpGuiConfigClass *klass)
                                     GIMP_PARAM_STATIC_STRINGS |
                                     GIMP_CONFIG_PARAM_RESTART);
   GIMP_CONFIG_INSTALL_PROP_BOOLEAN (object_class,
-                                    PROP_PLAYGROUND_MULTI_STROKE,
-                                    "playground-multi-stroke",
-                                    PLAYGROUND_MULTI_STROKE_BLURB,
+                                    PROP_PLAYGROUND_SYMMETRY,
+                                    "playground-symmetry",
+                                    PLAYGROUND_SYMMETRY_BLURB,
                                     FALSE,
                                     GIMP_PARAM_STATIC_STRINGS |
                                     GIMP_CONFIG_PARAM_RESTART);
@@ -523,8 +523,8 @@ gimp_gui_config_set_property (GObject      *object,
     case PROP_PLAYGROUND_HANDLE_TRANSFORM_TOOL:
       gui_config->playground_handle_transform_tool = g_value_get_boolean (value);
       break;
-    case PROP_PLAYGROUND_MULTI_STROKE:
-      gui_config->playground_multi_stroke = g_value_get_boolean (value);
+    case PROP_PLAYGROUND_SYMMETRY:
+      gui_config->playground_symmetry = g_value_get_boolean (value);
       break;
     case PROP_PLAYGROUND_MYBRUSH_TOOL:
       gui_config->playground_mybrush_tool = g_value_get_boolean (value);
@@ -673,8 +673,8 @@ gimp_gui_config_get_property (GObject    *object,
     case PROP_PLAYGROUND_HANDLE_TRANSFORM_TOOL:
       g_value_set_boolean (value, gui_config->playground_handle_transform_tool);
       break;
-    case PROP_PLAYGROUND_MULTI_STROKE:
-      g_value_set_boolean (value, gui_config->playground_multi_stroke);
+    case PROP_PLAYGROUND_SYMMETRY:
+      g_value_set_boolean (value, gui_config->playground_symmetry);
       break;
     case PROP_PLAYGROUND_MYBRUSH_TOOL:
       g_value_set_boolean (value, gui_config->playground_mybrush_tool);

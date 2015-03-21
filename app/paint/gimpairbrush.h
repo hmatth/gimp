@@ -38,7 +38,7 @@ struct _GimpAirbrush
 
   guint             timeout_id;
 
-  GimpMultiStroke  *mstroke;
+  GimpSymmetry     *sym;
   GimpDrawable     *drawable;
   GimpPaintOptions *paint_options;
 };

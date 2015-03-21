@@ -117,7 +117,7 @@ struct _GimpPaintOptions
   GimpViewType              gradient_view_type;
   GimpViewSize              gradient_view_size;
 
-  GType                     multi_stroke;
+  GType                     symmetry;
 };
 
 struct _GimpPaintOptionsClass

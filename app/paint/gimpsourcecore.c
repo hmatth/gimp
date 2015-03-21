@@ -32,8 +32,8 @@
 #include "core/gimperror.h"
 #include "core/gimpimage.h"
 #include "core/gimppickable.h"
+#include "core/gimpsymmetry.h"
 
-#include "gimpmultistroke.h"
 #include "gimpsourcecore.h"
 #include "gimpsourceoptions.h"
 
@@ -66,7 +66,7 @@ static gboolean gimp_source_core_start           (GimpPaintCore     *paint_core,
 static void     gimp_source_core_paint           (GimpPaintCore     *paint_core,
                                                   GimpDrawable      *drawable,
                                                   GimpPaintOptions  *paint_options,
-                                                  GimpMultiStroke   *mstroke,
+                                                  GimpSymmetry      *sym,
                                                   GimpPaintState     paint_state,
                                                   guint32            time);
 
@@ -74,7 +74,7 @@ static void     gimp_source_core_paint           (GimpPaintCore     *paint_core,
 static void     gimp_source_core_motion          (GimpSourceCore    *source_core,
                                                   GimpDrawable      *drawable,
                                                   GimpPaintOptions  *paint_options,
-                                                  GimpMultiStroke   *mstroke);
+                                                  GimpSymmetry      *sym);
 #endif
 
 static gboolean gimp_source_core_real_use_source (GimpSourceCore    *source_core,
@@ -254,7 +254,7 @@ static void
 gimp_source_core_paint (GimpPaintCore    *paint_core,
                         GimpDrawable     *drawable,
                         GimpPaintOptions *paint_options,
-                        GimpMultiStroke  *mstroke,
+                        GimpSymmetry     *sym,
                         GimpPaintState    paint_state,
                         guint32           time)
 {
@@ -263,7 +263,7 @@ gimp_source_core_paint (GimpPaintCore    *paint_core,
   const GimpCoords  *coords;
 
   /* The source is based on the original stroke */
-  coords = gimp_multi_stroke_get_origin (mstroke);
+  coords = gimp_symmetry_get_origin (sym);
 
   switch (paint_state)
     {
@@ -328,7 +328,7 @@ gimp_source_core_paint (GimpPaintCore    *paint_core,
           source_core->src_y = dest_y + source_core->offset_y;
 
           gimp_source_core_motion (source_core, drawable, paint_options,
-                                   mstroke);
+                                   sym);
         }
       break;
 
@@ -353,7 +353,7 @@ void
 gimp_source_core_motion (GimpSourceCore   *source_core,
                          GimpDrawable     *drawable,
                          GimpPaintOptions *paint_options,
-                         GimpMultiStroke  *mstroke)
+                         GimpSymmetry     *sym)
 
 {
   GimpPaintCore     *paint_core   = GIMP_PAINT_CORE (source_core);
@@ -385,8 +385,8 @@ gimp_source_core_motion (GimpSourceCore   *source_core,
   fade_point = gimp_paint_options_get_fade (paint_options, image,
                                             paint_core->pixel_dist);
 
-  origin   = gimp_multi_stroke_get_origin (mstroke);
-  nstrokes = gimp_multi_stroke_get_size (mstroke);
+  origin   = gimp_symmetry_get_origin (sym);
+  nstrokes = gimp_symmetry_get_size (sym);
 
   /* Some settings are based on the original stroke. */
   opacity = gimp_dynamics_get_linear_value (dynamics,
@@ -423,7 +423,7 @@ gimp_source_core_motion (GimpSourceCore   *source_core,
 
   for (i = 0; i < nstrokes; i++)
     {
-      coords = gimp_multi_stroke_get_coords (mstroke, i);
+      coords = gimp_symmetry_get_coords (sym, i);
 
       paint_buffer = gimp_paint_core_get_paint_buffer (paint_core, drawable,
                                                        paint_options, coords,
@@ -468,9 +468,9 @@ gimp_source_core_motion (GimpSourceCore   *source_core,
       /*  Set the paint buffer to transparent  */
       gegl_buffer_clear (paint_buffer, NULL);
 
-      op = gimp_multi_stroke_get_operation (mstroke, i,
-                                            gegl_buffer_get_width (paint_buffer),
-                                            gegl_buffer_get_height (paint_buffer));
+      op = gimp_symmetry_get_operation (sym, i,
+                                        gegl_buffer_get_width (paint_buffer),
+                                        gegl_buffer_get_height (paint_buffer));
       GIMP_SOURCE_CORE_GET_CLASS (source_core)->motion (source_core,
                                                         drawable,
                                                         paint_options,

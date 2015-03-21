@@ -38,8 +38,8 @@
 #include "core/gimpimage.h"
 #include "core/gimppattern.h"
 #include "core/gimppickable.h"
+#include "core/gimpsymmetry.h"
 
-#include "gimpmultistroke.h"
 #include "gimpperspectiveclone.h"
 #include "gimpperspectivecloneoptions.h"
 
@@ -49,7 +49,7 @@
 static void         gimp_perspective_clone_paint      (GimpPaintCore     *paint_core,
                                                        GimpDrawable      *drawable,
                                                        GimpPaintOptions  *paint_options,
-                                                       GimpMultiStroke   *mstroke,
+                                                       GimpSymmetry      *sym,
                                                        GimpPaintState     paint_state,
                                                        guint32            time);
 
@@ -121,7 +121,7 @@ static void
 gimp_perspective_clone_paint (GimpPaintCore    *paint_core,
                               GimpDrawable     *drawable,
                               GimpPaintOptions *paint_options,
-                              GimpMultiStroke  *mstroke,
+                              GimpSymmetry     *sym,
                               GimpPaintState    paint_state,
                               guint32           time)
 {
@@ -133,7 +133,7 @@ gimp_perspective_clone_paint (GimpPaintCore    *paint_core,
   const GimpCoords     *coords;
 
   /* The source is based on the original stroke */
-  coords = gimp_multi_stroke_get_origin (mstroke);
+  coords = gimp_symmetry_get_origin (sym);
 
   switch (paint_state)
     {
@@ -292,10 +292,10 @@ gimp_perspective_clone_paint (GimpPaintCore    *paint_core,
           gint        nstrokes;
           gint        i;
 
-          nstrokes = gimp_multi_stroke_get_size (mstroke);
+          nstrokes = gimp_symmetry_get_size (sym);
           for (i = 0; i < nstrokes; i++)
             {
-              coords = gimp_multi_stroke_get_coords (mstroke, i);
+              coords = gimp_symmetry_get_coords (sym, i);
 
               dest_x = coords->x;
               dest_y = coords->y;
@@ -326,7 +326,7 @@ gimp_perspective_clone_paint (GimpPaintCore    *paint_core,
                 }
             }
 
-          gimp_source_core_motion (source_core, drawable, paint_options, mstroke);
+          gimp_source_core_motion (source_core, drawable, paint_options, sym);
         }
       break;
 

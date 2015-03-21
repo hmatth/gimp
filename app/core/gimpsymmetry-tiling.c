@@ -1,7 +1,7 @@
 /* GIMP - The GNU Image Manipulation Program
  * Copyright (C) 1995 Spencer Kimball and Peter Mattis
  *
- * gimptiling.c
+ * gimpsymmetry-tiling.c
  * Copyright (C) 2015 Jehan <jehan@gimp.org>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -27,14 +27,13 @@
 
 #include "libgimpconfig/gimpconfig.h"
 
-#include "paint-types.h"
+#include "core-types.h"
 
-#include "core/gimp.h"
-#include "core/gimpdrawable.h"
-#include "core/gimpimage.h"
-#include "core/gimpitem.h"
-
-#include "gimptiling.h"
+#include "gimp.h"
+#include "gimpdrawable.h"
+#include "gimpimage.h"
+#include "gimpitem.h"
+#include "gimpsymmetry-tiling.h"
 
 #include "gimp-intl.h"
 
@@ -54,35 +53,35 @@ enum
 
 /* Local function prototypes */
 
-static void       gimp_tiling_constructed        (GObject         *object);
-static void       gimp_tiling_finalize           (GObject         *object);
-static void       gimp_tiling_set_property       (GObject         *object,
-                                                  guint            property_id,
-                                                  const GValue    *value,
-                                                  GParamSpec      *pspec);
-static void       gimp_tiling_get_property       (GObject         *object,
-                                                  guint            property_id,
-                                                  GValue          *value,
-                                                  GParamSpec      *pspec);
+static void       gimp_tiling_constructed        (GObject      *object);
+static void       gimp_tiling_finalize           (GObject      *object);
+static void       gimp_tiling_set_property       (GObject      *object,
+                                                  guint         property_id,
+                                                  const GValue *value,
+                                                  GParamSpec   *pspec);
+static void       gimp_tiling_get_property       (GObject      *object,
+                                                  guint         property_id,
+                                                  GValue       *value,
+                                                  GParamSpec   *pspec);
 
-static void       gimp_tiling_update_strokes     (GimpMultiStroke *tiling,
-                                                  GimpDrawable    *drawable,
-                                                  GimpCoords      *origin);
-static GeglNode * gimp_tiling_get_operation      (GimpMultiStroke *tiling,
-                                                  gint             stroke,
-                                                  gint             paint_width,
-                                                  gint             paint_height);
-static GParamSpec ** gimp_tiling_get_settings    (GimpMultiStroke *mstroke,
-                                                  guint           *nsettings);
+static void       gimp_tiling_update_strokes     (GimpSymmetry *tiling,
+                                                  GimpDrawable *drawable,
+                                                  GimpCoords   *origin);
+static GeglNode * gimp_tiling_get_operation      (GimpSymmetry *tiling,
+                                                  gint          stroke,
+                                                  gint          paint_width,
+                                                  gint          paint_height);
+static GParamSpec ** gimp_tiling_get_settings    (GimpSymmetry *sym,
+                                                  guint        *nsettings);
 static void
-               gimp_tiling_image_size_changed_cb (GimpImage       *image ,
-                                                  gint             previous_origin_x,
-                                                  gint             previous_origin_y,
-                                                  gint             previous_width,
-                                                  gint             previous_height,
-                                                  GimpMultiStroke *mstroke);
+               gimp_tiling_image_size_changed_cb (GimpImage    *image ,
+                                                  gint          previous_origin_x,
+                                                  gint          previous_origin_y,
+                                                  gint          previous_width,
+                                                  gint          previous_height,
+                                                  GimpSymmetry *sym);
 
-G_DEFINE_TYPE (GimpTiling, gimp_tiling, GIMP_TYPE_MULTI_STROKE)
+G_DEFINE_TYPE (GimpTiling, gimp_tiling, GIMP_TYPE_SYMMETRY)
 
 #define parent_class gimp_tiling_parent_class
 
@@ -90,18 +89,18 @@ static void
 gimp_tiling_class_init (GimpTilingClass *klass)
 {
   GObjectClass         *object_class       = G_OBJECT_CLASS (klass);
-  GimpMultiStrokeClass *multi_stroke_class = GIMP_MULTI_STROKE_CLASS (klass);
+  GimpSymmetryClass *symmetry_class = GIMP_SYMMETRY_CLASS (klass);
 
   object_class->constructed            = gimp_tiling_constructed;
   object_class->finalize               = gimp_tiling_finalize;
   object_class->set_property           = gimp_tiling_set_property;
   object_class->get_property           = gimp_tiling_get_property;
 
-  multi_stroke_class->label            = "Tiling";
-  multi_stroke_class->update_strokes   = gimp_tiling_update_strokes;
-  multi_stroke_class->get_operation    = gimp_tiling_get_operation;
-  multi_stroke_class->get_settings     = gimp_tiling_get_settings;
-  multi_stroke_class->get_xcf_settings = gimp_tiling_get_settings;
+  symmetry_class->label            = "Tiling";
+  symmetry_class->update_strokes   = gimp_tiling_update_strokes;
+  symmetry_class->get_operation    = gimp_tiling_get_operation;
+  symmetry_class->get_settings     = gimp_tiling_get_settings;
+  symmetry_class->get_xcf_settings = gimp_tiling_get_settings;
 
   GIMP_CONFIG_INSTALL_PROP_DOUBLE (object_class, PROP_X_INTERVAL,
                                    "x-interval", _("Intervals on x-axis (pixels)"),
@@ -136,10 +135,10 @@ gimp_tiling_init (GimpTiling *tiling)
 static void
 gimp_tiling_constructed (GObject *object)
 {
-  GimpMultiStroke  *mstroke;
+  GimpSymmetry     *sym;
   GParamSpecDouble *dspec;
 
-  mstroke = GIMP_MULTI_STROKE (object);
+  sym = GIMP_SYMMETRY (object);
 
   // TODO: can I have it in property and still save it in parent? Test.
   // Also connect on image changing size.
@@ -149,19 +148,19 @@ gimp_tiling_constructed (GObject *object)
   /* Update property values to actual image size. */
   dspec = G_PARAM_SPEC_DOUBLE (g_object_class_find_property (G_OBJECT_GET_CLASS (object),
                                                              "x-interval"));
-  dspec->maximum = gimp_image_get_width (mstroke->image);
+  dspec->maximum = gimp_image_get_width (sym->image);
 
   dspec = G_PARAM_SPEC_DOUBLE (g_object_class_find_property (G_OBJECT_GET_CLASS (object),
                                                              "shift"));
-  dspec->maximum = gimp_image_get_width (mstroke->image);
+  dspec->maximum = gimp_image_get_width (sym->image);
 
   dspec = G_PARAM_SPEC_DOUBLE (g_object_class_find_property (G_OBJECT_GET_CLASS (object),
                                                              "y-interval"));
-  dspec->maximum = gimp_image_get_height (mstroke->image);
+  dspec->maximum = gimp_image_get_height (sym->image);
 
-  g_signal_connect (mstroke->image, "size-changed-detailed",
+  g_signal_connect (sym->image, "size-changed-detailed",
                     G_CALLBACK (gimp_tiling_image_size_changed_cb),
-                    mstroke);
+                    sym);
 }
 
 static void
@@ -176,17 +175,17 @@ gimp_tiling_set_property (GObject      *object,
                           const GValue *value,
                           GParamSpec   *pspec)
 {
-  GimpTiling      *tiling = GIMP_TILING (object);
-  GimpMultiStroke *mstroke = GIMP_MULTI_STROKE (tiling);
+  GimpTiling   *tiling = GIMP_TILING (object);
+  GimpSymmetry *sym = GIMP_SYMMETRY (tiling);
 
   switch (property_id)
     {
     case PROP_X_INTERVAL:
-      if (mstroke->image)
+      if (sym->image)
         {
           gdouble new_x = g_value_get_double (value);
 
-          if (new_x < gimp_image_get_width (mstroke->image))
+          if (new_x < gimp_image_get_width (sym->image))
             {
               tiling->interval_x = new_x;
 
@@ -198,8 +197,8 @@ gimp_tiling_set_property (GObject      *object,
                   g_value_set_double (&val, 0.0);
                   g_object_set_property (G_OBJECT (object), "shift", &val);
                 }
-              else if (mstroke->drawable)
-                gimp_tiling_update_strokes (mstroke, mstroke->drawable, mstroke->origin);
+              else if (sym->drawable)
+                gimp_tiling_update_strokes (sym, sym->drawable, sym->origin);
             }
         }
       break;
@@ -207,7 +206,7 @@ gimp_tiling_set_property (GObject      *object,
         {
           gdouble new_y = g_value_get_double (value);
 
-          if (new_y < gimp_image_get_height (mstroke->image))
+          if (new_y < gimp_image_get_height (sym->image))
             {
               tiling->interval_y = new_y;
 
@@ -219,8 +218,8 @@ gimp_tiling_set_property (GObject      *object,
                   g_value_set_double (&val, 0.0);
                   g_object_set_property (G_OBJECT (object), "shift", &val);
                 }
-              else if (mstroke->drawable)
-                gimp_tiling_update_strokes (mstroke, mstroke->drawable, mstroke->origin);
+              else if (sym->drawable)
+                gimp_tiling_update_strokes (sym, sym->drawable, sym->origin);
             }
         }
       break;
@@ -232,20 +231,20 @@ gimp_tiling_set_property (GObject      *object,
               (tiling->interval_y != 0.0 && new_shift < tiling->interval_x))
             {
               tiling->shift = new_shift;
-              if (mstroke->drawable)
-                gimp_tiling_update_strokes (mstroke, mstroke->drawable, mstroke->origin);
+              if (sym->drawable)
+                gimp_tiling_update_strokes (sym, sym->drawable, sym->origin);
             }
         }
       break;
     case PROP_X_MAX:
       tiling->max_x = g_value_get_uint (value);
-      if (mstroke->drawable)
-        gimp_tiling_update_strokes (mstroke, mstroke->drawable, mstroke->origin);
+      if (sym->drawable)
+        gimp_tiling_update_strokes (sym, sym->drawable, sym->origin);
       break;
     case PROP_Y_MAX:
       tiling->max_y = g_value_get_uint (value);
-      if (mstroke->drawable)
-        gimp_tiling_update_strokes (mstroke, mstroke->drawable, mstroke->origin);
+      if (sym->drawable)
+        gimp_tiling_update_strokes (sym, sym->drawable, sym->origin);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -285,12 +284,12 @@ gimp_tiling_get_property (GObject    *object,
 }
 
 static void
-gimp_tiling_update_strokes (GimpMultiStroke *mstroke,
-                            GimpDrawable    *drawable,
-                            GimpCoords      *origin)
+gimp_tiling_update_strokes (GimpSymmetry *sym,
+                            GimpDrawable *drawable,
+                            GimpCoords   *origin)
 {
   GList            *strokes = NULL;
-  GimpTiling       *tiling  = GIMP_TILING (mstroke);
+  GimpTiling       *tiling  = GIMP_TILING (sym);
   GimpCoords       *coords;
   gint              width;
   gint              height;
@@ -302,10 +301,10 @@ gimp_tiling_update_strokes (GimpMultiStroke *mstroke,
   gint              y_count;
 
   g_return_if_fail (GIMP_IS_DRAWABLE (drawable));
-  g_return_if_fail (GIMP_IS_MULTI_STROKE (mstroke));
+  g_return_if_fail (GIMP_IS_SYMMETRY (sym));
 
-  g_list_free_full (mstroke->strokes, g_free);
-  mstroke->strokes = NULL;
+  g_list_free_full (sym->strokes, g_free);
+  sym->strokes = NULL;
 
   width  = gimp_item_get_width (GIMP_ITEM (drawable));
   height = gimp_item_get_height (GIMP_ITEM (drawable));
@@ -337,73 +336,73 @@ gimp_tiling_update_strokes (GimpMultiStroke *mstroke,
       else
         startx = startx - tiling->interval_x + tiling->shift;
     }
-  mstroke->strokes = strokes;
+  sym->strokes = strokes;
 
-  g_signal_emit_by_name (mstroke, "strokes-updated", mstroke->image);
+  g_signal_emit_by_name (sym, "strokes-updated", sym->image);
 }
 
 static GeglNode *
-gimp_tiling_get_operation (GimpMultiStroke *mstroke,
-                           gint             stroke,
-                           gint             paint_width,
-                           gint             paint_height)
+gimp_tiling_get_operation (GimpSymmetry *sym,
+                           gint          stroke,
+                           gint          paint_width,
+                           gint          paint_height)
 {
   /* No buffer transformation happens for tiling. */
   return NULL;
 }
 
 static GParamSpec **
-gimp_tiling_get_settings (GimpMultiStroke *mstroke,
-                          guint           *nsettings)
+gimp_tiling_get_settings (GimpSymmetry *sym,
+                          guint        *nsettings)
 {
   GParamSpec **pspecs;
 
   *nsettings = 6;
   pspecs = g_new (GParamSpec*, 6);
 
-  pspecs[0] = g_object_class_find_property (G_OBJECT_GET_CLASS (mstroke),
+  pspecs[0] = g_object_class_find_property (G_OBJECT_GET_CLASS (sym),
                                             "x-interval");
-  pspecs[1] = g_object_class_find_property (G_OBJECT_GET_CLASS (mstroke),
+  pspecs[1] = g_object_class_find_property (G_OBJECT_GET_CLASS (sym),
                                             "y-interval");
-  pspecs[2] = g_object_class_find_property (G_OBJECT_GET_CLASS (mstroke),
+  pspecs[2] = g_object_class_find_property (G_OBJECT_GET_CLASS (sym),
                                             "shift");
   pspecs[3] = NULL;
-  pspecs[4] = g_object_class_find_property (G_OBJECT_GET_CLASS (mstroke),
+  pspecs[4] = g_object_class_find_property (G_OBJECT_GET_CLASS (sym),
                                             "x-max");
-  pspecs[5] = g_object_class_find_property (G_OBJECT_GET_CLASS (mstroke),
+  pspecs[5] = g_object_class_find_property (G_OBJECT_GET_CLASS (sym),
                                             "y-max");
 
   return pspecs;
 }
 
 static void
-gimp_tiling_image_size_changed_cb (GimpImage       *image,
-                                   gint             previous_origin_x,
-                                   gint             previous_origin_y,
-                                   gint             previous_width,
-                                   gint             previous_height,
-                                   GimpMultiStroke *mstroke)
+gimp_tiling_image_size_changed_cb (GimpImage    *image,
+                                   gint          previous_origin_x,
+                                   gint          previous_origin_y,
+                                   gint          previous_width,
+                                   gint          previous_height,
+                                   GimpSymmetry *sym)
 {
   GParamSpecDouble *dspec;
 
   if (previous_width != gimp_image_get_width (image))
     {
-      dspec = G_PARAM_SPEC_DOUBLE (g_object_class_find_property (G_OBJECT_GET_CLASS (mstroke),
+      dspec = G_PARAM_SPEC_DOUBLE (g_object_class_find_property (G_OBJECT_GET_CLASS (sym),
                                                                  "x-interval"));
-      dspec->maximum = gimp_image_get_width (mstroke->image);
+      dspec->maximum = gimp_image_get_width (sym->image);
 
-      dspec = G_PARAM_SPEC_DOUBLE (g_object_class_find_property (G_OBJECT_GET_CLASS (mstroke),
+      dspec = G_PARAM_SPEC_DOUBLE (g_object_class_find_property (G_OBJECT_GET_CLASS (sym),
                                                                  "shift"));
-      dspec->maximum = gimp_image_get_width (mstroke->image);
+      dspec->maximum = gimp_image_get_width (sym->image);
     }
   if (previous_height != gimp_image_get_height (image))
     {
-      dspec = G_PARAM_SPEC_DOUBLE (g_object_class_find_property (G_OBJECT_GET_CLASS (mstroke),
+      dspec = G_PARAM_SPEC_DOUBLE (g_object_class_find_property (G_OBJECT_GET_CLASS (sym),
                                                                  "y-interval"));
-      dspec->maximum = gimp_image_get_height (mstroke->image);
+      dspec->maximum = gimp_image_get_height (sym->image);
     }
 
   if (previous_width != gimp_image_get_width (image) ||
       previous_height != gimp_image_get_height (image))
-    g_signal_emit_by_name (mstroke, "update-ui", mstroke->image);
+    g_signal_emit_by_name (sym, "update-ui", sym->image);
 }

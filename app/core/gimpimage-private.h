@@ -81,9 +81,9 @@ struct _GimpImagePrivate
   GeglNode          *graph;                 /*  GEGL projection graph        */
   GeglNode          *visible_mask;          /*  component visibility node    */
 
-  GList             *transformations;       /* Multi-Stroke transformations  */
-  GimpMultiStroke   *selected_transform;    /* Selected transformation       */
-  GimpMultiStroke   *single_stroke;         /* The base "Single" stroke      */
+  GList             *symmetries;            /*  Painting symmetries          */
+  GimpSymmetry      *selected_symmetry;     /*  Selected symmetry            */
+  GimpSymmetry      *id_symmetry;           /*  The base "Single" stroke     */
 
   GList             *guides;                /*  guides                       */
   GimpGrid          *grid;                  /*  grid                         */

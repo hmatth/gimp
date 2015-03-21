@@ -34,10 +34,10 @@
 #include "core/gimpimage.h"
 #include "core/gimppattern.h"
 #include "core/gimppickable.h"
+#include "core/gimpsymmetry.h"
 
 #include "gimpclone.h"
 #include "gimpcloneoptions.h"
-#include "gimpmultistroke.h"
 
 #include "gimp-intl.h"
 

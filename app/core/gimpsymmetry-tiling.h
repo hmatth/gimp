@@ -1,7 +1,7 @@
 /* GIMP - The GNU Image Manipulation Program
  * Copyright (C) 1995 Spencer Kimball and Peter Mattis
  *
- * gimptiling.h
+ * gimpsymmetry-tiling.h
  * Copyright (C) 2015 Jehan <jehan@gimp.org>
  * 
  * This program is free software: you can redistribute it and/or modify
@@ -22,7 +22,7 @@
 #define __GIMP_TILING_H__
 
 
-#include "gimpmultistroke.h"
+#include "gimpsymmetry.h"
 
 
 #define GIMP_TYPE_TILING            (gimp_tiling_get_type ())
@@ -36,18 +36,18 @@ typedef struct _GimpTilingClass GimpTilingClass;
 
 struct _GimpTiling
 {
-  GimpMultiStroke  parent_instance;
+  GimpSymmetry  parent_instance;
 
-  gdouble          interval_x;
-  gdouble          interval_y;
-  gdouble          shift;
-  guint            max_x;
-  guint            max_y;
+  gdouble       interval_x;
+  gdouble       interval_y;
+  gdouble       shift;
+  guint         max_x;
+  guint         max_y;
 };
 
 struct _GimpTilingClass
 {
-  GimpMultiStrokeClass  parent_class;
+  GimpSymmetryClass  parent_class;
 };
 
 GType        gimp_tiling_get_type                (void) G_GNUC_CONST;

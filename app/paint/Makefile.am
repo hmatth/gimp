@@ -52,12 +52,6 @@ libapppaint_a_sources = \
 	gimpinkoptions.h		\
 	gimpinkundo.c			\
 	gimpinkundo.h			\
-	gimpmirror.c			\
-	gimpmirror.h			\
-	gimpmultistroke.c			\
-	gimpmultistroke.h			\
-	gimpmultistroke-info.c			\
-	gimpmultistroke-info.h			\
 	gimpmybrush.c			\
 	gimpmybrush.h			\
 	gimpmybrushoptions.c		\
@@ -89,9 +83,7 @@ libapppaint_a_sources = \
 	gimpsourcecore.c		\
 	gimpsourcecore.h		\
 	gimpsourceoptions.c		\
-	gimpsourceoptions.h		\
-	gimptiling.c			\
-	gimptiling.h
+	gimpsourceoptions.h
 
 libapppaint_a_built_sources = paint-enums.c
 

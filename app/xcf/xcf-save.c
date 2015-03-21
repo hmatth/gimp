@@ -45,15 +45,14 @@
 #include "core/gimpimage-metadata.h"
 #include "core/gimpimage-private.h"
 #include "core/gimpimage-sample-points.h"
+#include "core/gimpimage-symmetry.h"
 #include "core/gimplayer.h"
 #include "core/gimplayermask.h"
 #include "core/gimpmirrorguide.h"
 #include "core/gimpparasitelist.h"
 #include "core/gimpprogress.h"
 #include "core/gimpsamplepoint.h"
-
-#include "paint/gimpmultistroke.h"
-#include "paint/gimpmultistroke-info.h"
+#include "core/gimpsymmetry.h"
 
 #include "text/gimptextlayer.h"
 #include "text/gimptextlayer-xcf.h"
@@ -364,9 +363,9 @@ xcf_save_image_props (XcfInfo    *info,
     xcf_check_error (xcf_save_prop (info, image, PROP_GUIDES, error,
                                     gimp_image_get_guides (image)));
 
-  if (gimp_image_get_multi_strokes (image))
-    xcf_check_error (xcf_save_prop (info, image, PROP_MULTI_STROKE, error,
-                                    gimp_image_get_multi_strokes (image)));
+  if (gimp_image_get_symmetrys (image))
+    xcf_check_error (xcf_save_prop (info, image, PROP_SYMMETRY, error,
+                                    gimp_image_get_symmetrys (image)));
 
   if (gimp_image_get_sample_points (image))
     xcf_check_error (xcf_save_prop (info, image, PROP_SAMPLE_POINTS, error,
@@ -906,20 +905,20 @@ xcf_save_prop (XcfInfo    *info,
       }
       break;
 
-    case PROP_MULTI_STROKE:
+    case PROP_SYMMETRY:
       {
-        GList            *mstrokes;
-        GList            *iter;
-        GimpMultiStroke  *mstroke;
-        GParamSpec      **settings;
-        GParamSpec       *spec;
-        guint             nsettings;
-        guint32           base;
-        glong             pos;
-        gint              i = 0;
+        GList         *syms;
+        GList         *iter;
+        GimpSymmetry  *sym;
+        GParamSpec   **settings;
+        GParamSpec    *spec;
+        guint          nsettings;
+        guint32        base;
+        glong          pos;
+        gint           i = 0;
 
         xcf_write_prop_type_check_error (info, prop_type);
-        /* because we don't know how much room the Multi-Stroke list
+        /* because we don't know how much room the Symmetry list
          * will take we save the file position and write the length
          * later.
          */
@@ -928,35 +927,35 @@ xcf_save_prop (XcfInfo    *info,
         xcf_write_int32_check_error (info, &size, 1);
         base = info->cp;
 
-        mstrokes = va_arg (args, GList *);
+        syms = va_arg (args, GList *);
 
-        /* Index of active multi-stroke, starting at 1
+        /* Index of active symmetry starting at 1
          * (because 0 means none active) */
-        if (gimp_image_get_selected_multi_stroke (image))
+        if (gimp_image_get_selected_symmetry (image))
           {
-            for (i = 1, iter = mstrokes; iter; iter = g_list_next (iter), i++)
+            for (i = 1, iter = syms; iter; iter = g_list_next (iter), i++)
               {
-                mstroke = GIMP_MULTI_STROKE (iter->data);
-                if (mstroke == gimp_image_get_selected_multi_stroke (image))
+                sym = GIMP_SYMMETRY (iter->data);
+                if (sym == gimp_image_get_selected_symmetry (image))
                   break;
               }
           }
         xcf_write_int32_check_error (info, (guint32 *)  &i, 1);
-        /* Number of multi-strokes that follows. */
-        i = g_list_length (mstrokes);
+        /* Number of symmetry that follows. */
+        i = g_list_length (syms);
         xcf_write_int32_check_error (info, (guint32 *)  &i, 1);
 
-        for (iter = mstrokes; iter; iter = g_list_next (iter))
+        for (iter = syms; iter; iter = g_list_next (iter))
           {
             const gchar *name;
 
-            mstroke = GIMP_MULTI_STROKE (iter->data);
+            sym = GIMP_SYMMETRY (iter->data);
 
-            name = g_type_name (mstroke->type);
+            name = g_type_name (sym->type);
             xcf_write_string_check_error (info, (gchar **) &name, 1);
 
-            settings = gimp_multi_stroke_get_xcf_settings (mstroke,
-                                                           &nsettings);
+            settings = gimp_symmetry_get_xcf_settings (sym,
+                                                       &nsettings);
 
             for (i = 0; i < nsettings; i++)
               {
@@ -972,7 +971,7 @@ xcf_save_prop (XcfInfo    *info,
                         gboolean value;
                         guint8   uint_value;
 
-                        g_object_get (mstroke,
+                        g_object_get (sym,
                                       g_param_spec_get_name (spec),
                                       &value,
                                       NULL);
@@ -984,7 +983,7 @@ xcf_save_prop (XcfInfo    *info,
                       {
                         gfloat value;
 
-                        g_object_get (mstroke,
+                        g_object_get (sym,
                                       g_param_spec_get_name (spec),
                                       &value,
                                       NULL);
@@ -996,7 +995,7 @@ xcf_save_prop (XcfInfo    *info,
                         gdouble value;
                         gfloat  float_value;
 
-                        g_object_get (mstroke,
+                        g_object_get (sym,
                                       g_param_spec_get_name (spec),
                                       &value,
                                       NULL);
@@ -1009,7 +1008,7 @@ xcf_save_prop (XcfInfo    *info,
                         guint   value;
                         guint32 uint_value;
 
-                        g_object_get (mstroke,
+                        g_object_get (sym,
                                       g_param_spec_get_name (spec),
                                       &value,
                                       NULL);
@@ -1022,7 +1021,7 @@ xcf_save_prop (XcfInfo    *info,
                         gint    value;
                         guint32 uint_value;
 
-                        g_object_get (mstroke,
+                        g_object_get (sym,
                                       g_param_spec_get_name (spec),
                                       &value,
                                       NULL);
@@ -1034,7 +1033,7 @@ xcf_save_prop (XcfInfo    *info,
                       {
                         gchar* value;
 
-                        g_object_get (mstroke,
+                        g_object_get (sym,
                                       g_param_spec_get_name (spec),
                                       &value,
                                       NULL);

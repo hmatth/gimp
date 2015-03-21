@@ -43,15 +43,16 @@
 #include "gimpimagefile.h"
 #include "gimpgradient.h"
 #include "gimpimage.h"
+#include "gimpimage-symmetry.h"
 #include "gimpmarshal.h"
 #include "gimppaintinfo.h"
 #include "gimppalette.h"
 #include "gimppattern.h"
+#include "gimpsymmetry.h"
 #include "gimptemplate.h"
 #include "gimptoolinfo.h"
 #include "gimptoolpreset.h"
 
-#include "paint/gimpmultistroke.h"
 #include "paint/gimppaintoptions.h"
 
 #include "text/gimpfont.h"
@@ -1921,15 +1922,15 @@ gimp_context_real_set_image (GimpContext *context,
       GIMP_IS_PAINT_OPTIONS (context->tool_info->tool_options))
     {
       GimpPaintOptions *paint_options;
-      GimpMultiStroke  *mstroke = NULL;
+      GimpSymmetry  *sym = NULL;
 
       paint_options = GIMP_PAINT_OPTIONS (context->tool_info->tool_options);
 
       if (image)
-        mstroke = gimp_image_get_selected_multi_stroke (image);
+        sym = gimp_image_get_selected_symmetry (image);
 
-      g_object_set (paint_options, "multi-stroke",
-                    mstroke ? mstroke->type : G_TYPE_NONE,
+      g_object_set (paint_options, "symmetry",
+                    sym ? sym->type : G_TYPE_NONE,
                     NULL);
     }
 

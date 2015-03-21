@@ -31,8 +31,7 @@
 #include "core/gimpdrawable.h"
 #include "core/gimpdynamics.h"
 #include "core/gimpimage.h"
-
-#include "gimpmultistroke.h"
+#include "core/gimpsymmetry.h"
 
 #include "gimpdodgeburn.h"
 #include "gimpdodgeburnoptions.h"
@@ -43,13 +42,13 @@
 static void   gimp_dodge_burn_paint  (GimpPaintCore    *paint_core,
                                       GimpDrawable     *drawable,
                                       GimpPaintOptions *paint_options,
-                                      GimpMultiStroke  *mstroke,
+                                      GimpSymmetry     *sym,
                                       GimpPaintState    paint_state,
                                       guint32           time);
 static void   gimp_dodge_burn_motion (GimpPaintCore    *paint_core,
                                       GimpDrawable     *drawable,
                                       GimpPaintOptions *paint_options,
-                                      GimpMultiStroke  *mstroke);
+                                      GimpSymmetry     *sym);
 
 
 G_DEFINE_TYPE (GimpDodgeBurn, gimp_dodge_burn, GIMP_TYPE_BRUSH_CORE)
@@ -89,7 +88,7 @@ static void
 gimp_dodge_burn_paint (GimpPaintCore    *paint_core,
                        GimpDrawable     *drawable,
                        GimpPaintOptions *paint_options,
-                       GimpMultiStroke  *mstroke,
+                       GimpSymmetry     *sym,
                        GimpPaintState    paint_state,
                        guint32           time)
 {
@@ -99,7 +98,7 @@ gimp_dodge_burn_paint (GimpPaintCore    *paint_core,
       break;
 
     case GIMP_PAINT_STATE_MOTION:
-      gimp_dodge_burn_motion (paint_core, drawable, paint_options, mstroke);
+      gimp_dodge_burn_motion (paint_core, drawable, paint_options, sym);
       break;
 
     case GIMP_PAINT_STATE_FINISH:
@@ -111,7 +110,7 @@ static void
 gimp_dodge_burn_motion (GimpPaintCore    *paint_core,
                         GimpDrawable     *drawable,
                         GimpPaintOptions *paint_options,
-                        GimpMultiStroke  *mstroke)
+                        GimpSymmetry     *sym)
 {
   GimpDodgeBurnOptions *options   = GIMP_DODGE_BURN_OPTIONS (paint_options);
   GimpContext          *context   = GIMP_CONTEXT (paint_options);
@@ -129,10 +128,10 @@ gimp_dodge_burn_motion (GimpPaintCore    *paint_core,
   gint                  nstrokes;
   gint                  i;
 
-  nstrokes = gimp_multi_stroke_get_size (mstroke);
+  nstrokes = gimp_symmetry_get_size (sym);
   for (i = 0; i < nstrokes; i++)
     {
-      coords = gimp_multi_stroke_get_coords (mstroke, i);
+      coords = gimp_symmetry_get_coords (sym, i);
 
       fade_point = gimp_paint_options_get_fade (paint_options, image,
                                                 paint_core->pixel_dist);
@@ -154,9 +153,9 @@ gimp_dodge_burn_motion (GimpPaintCore    *paint_core,
       if (! paint_buffer)
         continue;
 
-      op = gimp_multi_stroke_get_operation (mstroke, i,
-                                            paint_width,
-                                            paint_height);
+      op = gimp_symmetry_get_operation (sym, i,
+                                        paint_width,
+                                        paint_height);
 
       /*  DodgeBurn the region  */
       gimp_gegl_dodgeburn (gimp_paint_core_get_orig_image (paint_core),

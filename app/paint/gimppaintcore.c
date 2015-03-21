@@ -38,13 +38,13 @@
 #include "core/gimpchannel.h"
 #include "core/gimpimage.h"
 #include "core/gimpimage-guides.h"
+#include "core/gimpimage-symmetry.h"
 #include "core/gimpimage-undo.h"
 #include "core/gimppickable.h"
 #include "core/gimpprojection.h"
+#include "core/gimpsymmetry.h"
 #include "core/gimptempbuf.h"
 
-#include "gimpmultistroke.h"
-#include "gimpmultistroke-info.h"
 #include "gimppaintcore.h"
 #include "gimppaintcoreundo.h"
 #include "gimppaintcore-loops.h"
@@ -89,7 +89,7 @@ static gboolean  gimp_paint_core_real_pre_paint      (GimpPaintCore    *core,
 static void      gimp_paint_core_real_paint          (GimpPaintCore    *core,
                                                       GimpDrawable     *drawable,
                                                       GimpPaintOptions *options,
-                                                      GimpMultiStroke  *mstroke,
+                                                      GimpSymmetry     *sym,
                                                       GimpPaintState    paint_state,
                                                       guint32           time);
 static void      gimp_paint_core_real_post_paint     (GimpPaintCore    *core,
@@ -236,7 +236,7 @@ static void
 gimp_paint_core_real_paint (GimpPaintCore    *core,
                             GimpDrawable     *drawable,
                             GimpPaintOptions *paint_options,
-                            GimpMultiStroke  *mstroke,
+                            GimpSymmetry     *sym,
                             GimpPaintState    paint_state,
                             guint32           time)
 {
@@ -311,9 +311,9 @@ gimp_paint_core_paint (GimpPaintCore    *core,
                              paint_options,
                              paint_state, time))
     {
-      GimpMultiStroke *mstroke;
-      GimpImage       *image;
-      GimpItem        *item;
+      GimpSymmetry *sym;
+      GimpImage    *image;
+      GimpItem     *item;
 
       item  = GIMP_ITEM (drawable);
       image = gimp_item_get_image (item);
@@ -325,17 +325,16 @@ gimp_paint_core_paint (GimpPaintCore    *core,
           core->last_paint.y = core->cur_coords.y;
         }
 
-      if (gimp_image_get_selected_multi_stroke (image))
-        mstroke = g_object_ref (gimp_image_get_selected_multi_stroke (image));
+      if (gimp_image_get_selected_symmetry (image))
+        sym = g_object_ref (gimp_image_get_selected_symmetry (image));
       else
-        mstroke = g_object_ref (gimp_image_get_single_stroke (image));
-      gimp_multi_stroke_set_origin (mstroke, drawable, &core->cur_coords);
+        sym = g_object_ref (gimp_image_symmetry_get_id (image));
+      gimp_symmetry_set_origin (sym, drawable, &core->cur_coords);
 
       core_class->paint (core, drawable,
                          paint_options,
-                         mstroke,
-                         paint_state, time);
-      g_object_unref (mstroke);
+                         sym, paint_state, time);
+      g_object_unref (sym);
 
       core_class->post_paint (core, drawable,
                               paint_options,

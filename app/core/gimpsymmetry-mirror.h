@@ -1,7 +1,7 @@
 /* GIMP - The GNU Image Manipulation Program
  * Copyright (C) 1995 Spencer Kimball and Peter Mattis
  *
- * gimpmirror.h
+ * gimpsymmetry-mirror.h
  * Copyright (C) 2015 Jehan <jehan@gimp.org>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -22,7 +22,7 @@
 #define __GIMP_MIRROR_H__
 
 
-#include "gimpmultistroke.h"
+#include "gimpsymmetry.h"
 
 
 #define GIMP_TYPE_MIRROR            (gimp_mirror_get_type ())
@@ -36,7 +36,7 @@ typedef struct _GimpMirrorClass GimpMirrorClass;
 
 struct _GimpMirror
 {
-  GimpMultiStroke  parent_instance;
+  GimpSymmetry     parent_instance;
 
   gboolean         horizontal_mirror;
   gboolean         vertical_mirror;
@@ -58,7 +58,7 @@ struct _GimpMirror
 
 struct _GimpMirrorClass
 {
-  GimpMultiStrokeClass  parent_class;
+  GimpSymmetryClass  parent_class;
 };
 
 

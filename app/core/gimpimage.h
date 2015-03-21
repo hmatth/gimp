@@ -435,19 +435,5 @@ gboolean    gimp_image_coords_in_active_pickable (GimpImage          *image,
 
 void            gimp_image_invalidate_previews   (GimpImage          *image);
 
-/* Painting Transformations */
-
-void            gimp_image_add_multi_stroke      (GimpImage       *image,
-                                                  GimpMultiStroke *mstroke);
-void            gimp_image_remove_multi_stroke   (GimpImage       *image,
-                                                  GimpMultiStroke *mstroke);
-GList         * gimp_image_get_multi_strokes     (GimpImage       *image);
-
-gboolean        gimp_image_select_multi_stroke   (GimpImage       *image,
-                                                  GType            type);
-GimpMultiStroke *
-            gimp_image_get_selected_multi_stroke (GimpImage       *image);
-GimpMultiStroke * gimp_image_get_single_stroke   (GimpImage       *image);
-
 
 #endif /* __GIMP_IMAGE_H__ */

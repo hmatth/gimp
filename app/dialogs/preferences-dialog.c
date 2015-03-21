@@ -1533,8 +1533,8 @@ prefs_dialog_new (Gimp       *gimp,
       button = prefs_check_button_add (object, "playground-seamless-clone-tool",
                                        _("_Seamless Clone tool"),
                                        GTK_BOX (vbox2));
-      button = prefs_check_button_add (object, "playground-multi-stroke",
-                                       _("_Multi-Stroke Painting"),
+      button = prefs_check_button_add (object, "playground-symmetry",
+                                       _("_Symmetry Painting"),
                                        GTK_BOX (vbox2));
     }
 

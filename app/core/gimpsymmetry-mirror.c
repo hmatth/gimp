@@ -1,7 +1,7 @@
 /* GIMP - The GNU Image Manipulation Program
  * Copyright (C) 1995 Spencer Kimball and Peter Mattis
  *
- * gimpmirror.c
+ * gimpsymmetry-mirror.c
  * Copyright (C) 2015 Jehan <jehan@gimp.org>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -27,18 +27,16 @@
 
 #include "libgimpconfig/gimpconfig.h"
 
-#include "paint-types.h"
+#include "core-types.h"
 
-#include "core/gimp.h"
-#include "core/gimpbrush.h"
-#include "core/gimpmirrorguide.h"
-#include "core/gimpimage.h"
-#include "core/gimpimage-guides.h"
-#include "core/gimpitem.h"
-
-#include "gimpbrushcore.h"
-#include "gimpmirror.h"
-#include "gimpsourcecore.h"
+#include "gimp.h"
+#include "gimpbrush.h"
+#include "gimpmirrorguide.h"
+#include "gimpimage.h"
+#include "gimpimage-guides.h"
+#include "gimpimage-symmetry.h"
+#include "gimpitem.h"
+#include "gimpsymmetry-mirror.h"
 
 #include "gimp-intl.h"
 
@@ -56,44 +54,44 @@ enum
 
 /* Local function prototypes */
 
-static void       gimp_mirror_finalize            (GObject         *object);
-static void       gimp_mirror_set_property        (GObject         *object,
-                                                   guint            property_id,
-                                                   const GValue    *value,
-                                                   GParamSpec      *pspec);
-static void       gimp_mirror_get_property        (GObject         *object,
-                                                   guint            property_id,
-                                                   GValue          *value,
-                                                   GParamSpec      *pspec);
+static void       gimp_mirror_finalize            (GObject      *object);
+static void       gimp_mirror_set_property        (GObject      *object,
+                                                   guint         property_id,
+                                                   const GValue *value,
+                                                   GParamSpec   *pspec);
+static void       gimp_mirror_get_property        (GObject      *object,
+                                                   guint         property_id,
+                                                   GValue       *value,
+                                                   GParamSpec   *pspec);
 
-static void       gimp_mirror_update_strokes      (GimpMultiStroke *mirror,
-                                                   GimpDrawable    *drawable,
-                                                   GimpCoords      *origin);
-static void       gimp_mirror_prepare_operations  (GimpMirror      *mirror,
-                                                   gint             paint_width,
-                                                   gint             paint_height);
-static GeglNode * gimp_mirror_get_operation       (GimpMultiStroke *mirror,
-                                                   gint             stroke,
-                                                   gint             paint_width,
-                                                   gint             paint_height);
-static void       gimp_mirror_reset               (GimpMirror      *mirror);
-static void       gimp_mirror_guide_removed_cb    (GObject         *object,
-                                                   GimpMirror      *mirror);
-static void       gimp_mirror_guide_position_cb   (GObject         *object,
-                                                   GParamSpec      *pspec,
-                                                   GimpMirror      *mirror);
-static GParamSpec ** gimp_mirror_get_settings     (GimpMultiStroke *mstroke,
-                                                   guint           *nsettings);
-static GParamSpec ** gimp_mirror_get_xcf_settings (GimpMultiStroke *mstroke,
-                                                   guint           *nsettings);
-static void  gimp_mirror_set_horizontal_symmetry  (GimpMirror      *mirror,
-                                                   gboolean         active);
-static void    gimp_mirror_set_vertical_symmetry  (GimpMirror      *mirror,
-                                                   gboolean         active);
-static void       gimp_mirror_set_point_symmetry  (GimpMirror      *mirror,
-                                                   gboolean         active);
+static void       gimp_mirror_update_strokes      (GimpSymmetry *mirror,
+                                                   GimpDrawable *drawable,
+                                                   GimpCoords   *origin);
+static void       gimp_mirror_prepare_operations  (GimpMirror   *mirror,
+                                                   gint          paint_width,
+                                                   gint          paint_height);
+static GeglNode * gimp_mirror_get_operation       (GimpSymmetry *mirror,
+                                                   gint          stroke,
+                                                   gint          paint_width,
+                                                   gint          paint_height);
+static void       gimp_mirror_reset               (GimpMirror   *mirror);
+static void       gimp_mirror_guide_removed_cb    (GObject      *object,
+                                                   GimpMirror   *mirror);
+static void       gimp_mirror_guide_position_cb   (GObject      *object,
+                                                   GParamSpec   *pspec,
+                                                   GimpMirror   *mirror);
+static GParamSpec ** gimp_mirror_get_settings     (GimpSymmetry *sym,
+                                                   guint        *nsettings);
+static GParamSpec ** gimp_mirror_get_xcf_settings (GimpSymmetry *sym,
+                                                   guint        *nsettings);
+static void  gimp_mirror_set_horizontal_symmetry  (GimpMirror   *mirror,
+                                                   gboolean      active);
+static void    gimp_mirror_set_vertical_symmetry  (GimpMirror   *mirror,
+                                                   gboolean      active);
+static void       gimp_mirror_set_point_symmetry  (GimpMirror   *mirror,
+                                                   gboolean      active);
 
-G_DEFINE_TYPE (GimpMirror, gimp_mirror, GIMP_TYPE_MULTI_STROKE)
+G_DEFINE_TYPE (GimpMirror, gimp_mirror, GIMP_TYPE_SYMMETRY)
 
 #define parent_class gimp_mirror_parent_class
 
@@ -101,17 +99,17 @@ static void
 gimp_mirror_class_init (GimpMirrorClass *klass)
 {
   GObjectClass         *object_class       = G_OBJECT_CLASS (klass);
-  GimpMultiStrokeClass *multi_stroke_class = GIMP_MULTI_STROKE_CLASS (klass);
+  GimpSymmetryClass *symmetry_class = GIMP_SYMMETRY_CLASS (klass);
 
   object_class->finalize               = gimp_mirror_finalize;
   object_class->set_property           = gimp_mirror_set_property;
   object_class->get_property           = gimp_mirror_get_property;
 
-  multi_stroke_class->label            = "Mirror";
-  multi_stroke_class->update_strokes   = gimp_mirror_update_strokes;
-  multi_stroke_class->get_operation    = gimp_mirror_get_operation;
-  multi_stroke_class->get_settings     = gimp_mirror_get_settings;
-  multi_stroke_class->get_xcf_settings = gimp_mirror_get_xcf_settings;
+  symmetry_class->label            = "Mirror";
+  symmetry_class->update_strokes   = gimp_mirror_update_strokes;
+  symmetry_class->get_operation    = gimp_mirror_get_operation;
+  symmetry_class->get_settings     = gimp_mirror_get_settings;
+  symmetry_class->get_xcf_settings = gimp_mirror_get_xcf_settings;
 
   /* Properties for user settings */
   GIMP_CONFIG_INSTALL_PROP_BOOLEAN (object_class, PROP_HORIZONTAL_SYMMETRY,
@@ -265,15 +263,15 @@ gimp_mirror_get_property (GObject    *object,
 }
 
 static void
-gimp_mirror_update_strokes (GimpMultiStroke *mstroke,
-                            GimpDrawable    *drawable,
-                            GimpCoords      *origin)
+gimp_mirror_update_strokes (GimpSymmetry *sym,
+                            GimpDrawable *drawable,
+                            GimpCoords   *origin)
 {
   GList      *strokes = NULL;
-  GimpMirror *mirror  = GIMP_MIRROR (mstroke);
+  GimpMirror *mirror  = GIMP_MIRROR (sym);
   GimpCoords *coords;
 
-  g_list_free_full (mstroke->strokes, g_free);
+  g_list_free_full (sym->strokes, g_free);
   strokes = g_list_prepend (strokes,
                             g_memdup (origin, sizeof (GimpCoords)));
 
@@ -296,9 +294,9 @@ gimp_mirror_update_strokes (GimpMultiStroke *mstroke,
       coords->y = 2.0 * mirror->horizontal_position - origin->y;
       strokes = g_list_prepend (strokes, coords);
     }
-  mstroke->strokes = g_list_reverse (strokes);
+  sym->strokes = g_list_reverse (strokes);
 
-  g_signal_emit_by_name (mstroke, "strokes-updated", mstroke->image);
+  g_signal_emit_by_name (sym, "strokes-updated", sym->image);
 }
 
 static void gimp_mirror_prepare_operations (GimpMirror *mirror,
@@ -355,16 +353,16 @@ static void gimp_mirror_prepare_operations (GimpMirror *mirror,
 }
 
 static GeglNode *
-gimp_mirror_get_operation (GimpMultiStroke *mstroke,
-                           gint             stroke,
-                           gint             paint_width,
-                           gint             paint_height)
+gimp_mirror_get_operation (GimpSymmetry *sym,
+                           gint          stroke,
+                           gint          paint_width,
+                           gint          paint_height)
 {
-  GimpMirror *mirror  = GIMP_MIRROR (mstroke);
+  GimpMirror *mirror  = GIMP_MIRROR (sym);
   GeglNode   *op;
 
   g_return_val_if_fail (stroke >= 0 &&
-                        stroke < g_list_length (mstroke->strokes), NULL);
+                        stroke < g_list_length (sym->strokes), NULL);
 
   gimp_mirror_prepare_operations (mirror, paint_width, paint_height);
 
@@ -387,16 +385,16 @@ gimp_mirror_get_operation (GimpMultiStroke *mstroke,
 static void
 gimp_mirror_reset (GimpMirror *mirror)
 {
-  GimpMultiStroke *mstroke;
+  GimpSymmetry *sym;
 
   g_return_if_fail (GIMP_IS_MIRROR (mirror));
 
-  mstroke = GIMP_MULTI_STROKE (mirror);
+  sym = GIMP_SYMMETRY (mirror);
 
-  if (mstroke->origin)
+  if (sym->origin)
     {
-      gimp_multi_stroke_set_origin (mstroke, mstroke->drawable,
-                                    mstroke->origin);
+      gimp_symmetry_set_origin (sym, sym->drawable,
+                                sym->origin);
     }
 }
 
@@ -433,11 +431,11 @@ gimp_mirror_guide_removed_cb (GObject    *object,
   if (mirror->horizontal_guide == NULL &&
       mirror->vertical_guide   == NULL)
     {
-      GimpMultiStroke *mstroke;
+      GimpSymmetry *sym;
 
-      mstroke = GIMP_MULTI_STROKE (mirror);
-      gimp_image_remove_multi_stroke (mstroke->image,
-                                      GIMP_MULTI_STROKE (mirror));
+      sym = GIMP_SYMMETRY (mirror);
+      gimp_image_remove_symmetry (sym->image,
+                                  GIMP_SYMMETRY (mirror));
     }
   else
     {
@@ -465,47 +463,47 @@ gimp_mirror_guide_position_cb (GObject    *object,
 }
 
 static GParamSpec **
-gimp_mirror_get_settings (GimpMultiStroke *mstroke,
-                          guint           *nsettings)
+gimp_mirror_get_settings (GimpSymmetry *sym,
+                          guint        *nsettings)
 {
   GParamSpec **pspecs;
 
   *nsettings = 5;
   pspecs = g_new (GParamSpec*, 5);
 
-  pspecs[0] = g_object_class_find_property (G_OBJECT_GET_CLASS (mstroke),
+  pspecs[0] = g_object_class_find_property (G_OBJECT_GET_CLASS (sym),
                                             "horizontal-symmetry");
-  pspecs[1] = g_object_class_find_property (G_OBJECT_GET_CLASS (mstroke),
+  pspecs[1] = g_object_class_find_property (G_OBJECT_GET_CLASS (sym),
                                             "vertical-symmetry");
-  pspecs[2] = g_object_class_find_property (G_OBJECT_GET_CLASS (mstroke),
+  pspecs[2] = g_object_class_find_property (G_OBJECT_GET_CLASS (sym),
                                             "point-symmetry");
   pspecs[3] = NULL;
-  pspecs[4] = g_object_class_find_property (G_OBJECT_GET_CLASS (mstroke),
+  pspecs[4] = g_object_class_find_property (G_OBJECT_GET_CLASS (sym),
                                             "disable-transformation");
 
   return pspecs;
 }
 
 static GParamSpec **
-gimp_mirror_get_xcf_settings (GimpMultiStroke *mstroke,
-                              guint           *nsettings)
+gimp_mirror_get_xcf_settings (GimpSymmetry *sym,
+                              guint        *nsettings)
 {
   GParamSpec **pspecs;
 
   *nsettings = 6;
   pspecs = g_new (GParamSpec*, 6);
 
-  pspecs[0] = g_object_class_find_property (G_OBJECT_GET_CLASS (mstroke),
+  pspecs[0] = g_object_class_find_property (G_OBJECT_GET_CLASS (sym),
                                             "horizontal-symmetry");
-  pspecs[1] = g_object_class_find_property (G_OBJECT_GET_CLASS (mstroke),
+  pspecs[1] = g_object_class_find_property (G_OBJECT_GET_CLASS (sym),
                                             "vertical-symmetry");
-  pspecs[2] = g_object_class_find_property (G_OBJECT_GET_CLASS (mstroke),
+  pspecs[2] = g_object_class_find_property (G_OBJECT_GET_CLASS (sym),
                                             "point-symmetry");
-  pspecs[3] = g_object_class_find_property (G_OBJECT_GET_CLASS (mstroke),
+  pspecs[3] = g_object_class_find_property (G_OBJECT_GET_CLASS (sym),
                                             "horizontal-position");
-  pspecs[4] = g_object_class_find_property (G_OBJECT_GET_CLASS (mstroke),
+  pspecs[4] = g_object_class_find_property (G_OBJECT_GET_CLASS (sym),
                                             "vertical-position");
-  pspecs[5] = g_object_class_find_property (G_OBJECT_GET_CLASS (mstroke),
+  pspecs[5] = g_object_class_find_property (G_OBJECT_GET_CLASS (sym),
                                             "disable-transformation");
 
   return pspecs;
@@ -515,13 +513,13 @@ static void
 gimp_mirror_set_horizontal_symmetry (GimpMirror *mirror,
                                      gboolean    active)
 {
-  GimpMultiStroke *mstroke;
-  GimpImage       *image;
+  GimpSymmetry *sym;
+  GimpImage    *image;
 
   g_return_if_fail (GIMP_IS_MIRROR (mirror));
 
-  mstroke = GIMP_MULTI_STROKE (mirror);
-  image   = mstroke->image;
+  sym   = GIMP_SYMMETRY (mirror);
+  image = sym->image;
 
   if (active == mirror->horizontal_mirror)
     return;
@@ -574,13 +572,13 @@ static void
 gimp_mirror_set_vertical_symmetry (GimpMirror *mirror,
                                    gboolean    active)
 {
-  GimpMultiStroke *mstroke;
-  GimpImage       *image;
+  GimpSymmetry *sym;
+  GimpImage    *image;
 
   g_return_if_fail (GIMP_IS_MIRROR (mirror));
 
-  mstroke = GIMP_MULTI_STROKE (mirror);
-  image   = mstroke->image;
+  sym   = GIMP_SYMMETRY (mirror);
+  image = sym->image;
 
   if (active == mirror->vertical_mirror)
     return;
@@ -633,13 +631,13 @@ static void
 gimp_mirror_set_point_symmetry (GimpMirror *mirror,
                                 gboolean    active)
 {
-  GimpMultiStroke *mstroke;
-  GimpImage       *image;
+  GimpSymmetry *sym;
+  GimpImage    *image;
 
   g_return_if_fail (GIMP_IS_MIRROR (mirror));
 
-  mstroke = GIMP_MULTI_STROKE (mirror);
-  image   = mstroke->image;
+  sym   = GIMP_SYMMETRY (mirror);
+  image = sym->image;
 
   if (active == mirror->point_symmetry)
     return;

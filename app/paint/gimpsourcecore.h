@@ -104,7 +104,7 @@ gboolean gimp_source_core_use_source (GimpSourceCore    *source_core,
 void     gimp_source_core_motion     (GimpSourceCore    *source_core,
                                       GimpDrawable      *drawable,
                                       GimpPaintOptions  *paint_options,
-                                      GimpMultiStroke   *mstroke);
+                                      GimpSymmetry      *sym);
 
 
 #endif  /*  __GIMP_SOURCE_CORE_H__  */

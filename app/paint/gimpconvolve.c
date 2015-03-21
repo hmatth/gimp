@@ -30,9 +30,8 @@
 #include "core/gimpdynamics.h"
 #include "core/gimpimage.h"
 #include "core/gimppickable.h"
+#include "core/gimpsymmetry.h"
 #include "core/gimptempbuf.h"
-
-#include "gimpmultistroke.h"
 
 #include "gimpconvolve.h"
 #include "gimpconvolveoptions.h"
@@ -50,13 +49,13 @@
 static void    gimp_convolve_paint            (GimpPaintCore    *paint_core,
                                                GimpDrawable     *drawable,
                                                GimpPaintOptions *paint_options,
-                                               GimpMultiStroke  *mstroke,
+                                               GimpSymmetry     *sym,
                                                GimpPaintState    paint_state,
                                                guint32           time);
 static void    gimp_convolve_motion           (GimpPaintCore    *paint_core,
                                                GimpDrawable     *drawable,
                                                GimpPaintOptions *paint_options,
-                                               GimpMultiStroke  *mstroke);
+                                               GimpSymmetry     *sym);
 
 static void    gimp_convolve_calculate_matrix (GimpConvolve     *convolve,
                                                GimpConvolveType  type,
@@ -104,7 +103,7 @@ static void
 gimp_convolve_paint (GimpPaintCore    *paint_core,
                      GimpDrawable     *drawable,
                      GimpPaintOptions *paint_options,
-                     GimpMultiStroke  *mstroke,
+                     GimpSymmetry     *sym,
                      GimpPaintState    paint_state,
                      guint32           time)
 {
@@ -112,7 +111,7 @@ gimp_convolve_paint (GimpPaintCore    *paint_core,
     {
     case GIMP_PAINT_STATE_MOTION:
       gimp_convolve_motion (paint_core, drawable, paint_options,
-                            mstroke);
+                            sym);
       break;
 
     default:
@@ -124,7 +123,7 @@ static void
 gimp_convolve_motion (GimpPaintCore    *paint_core,
                       GimpDrawable     *drawable,
                       GimpPaintOptions *paint_options,
-                      GimpMultiStroke  *mstroke)
+                      GimpSymmetry     *sym)
 {
   GimpConvolve        *convolve   = GIMP_CONVOLVE (paint_core);
   GimpBrushCore       *brush_core = GIMP_BRUSH_CORE (paint_core);
@@ -146,13 +145,13 @@ gimp_convolve_motion (GimpPaintCore    *paint_core,
   gint                 nstrokes;
   gint                 i;
 
-  nstrokes = gimp_multi_stroke_get_size (mstroke);
+  nstrokes = gimp_symmetry_get_size (sym);
   fade_point = gimp_paint_options_get_fade (paint_options, image,
                                             paint_core->pixel_dist);
 
   for (i = 0; i < nstrokes; i++)
     {
-      coords = gimp_multi_stroke_get_coords (mstroke, i);
+      coords = gimp_symmetry_get_coords (sym, i);
 
       opacity = gimp_dynamics_get_linear_value (dynamics,
                                                 GIMP_DYNAMICS_OUTPUT_OPACITY,
@@ -171,9 +170,9 @@ gimp_convolve_motion (GimpPaintCore    *paint_core,
       if (! paint_buffer)
         continue;
 
-      op = gimp_multi_stroke_get_operation (mstroke, i,
-                                            paint_width,
-                                            paint_height);
+      op = gimp_symmetry_get_operation (sym, i,
+                                        paint_width,
+                                        paint_height);
 
       rate = (options->rate *
               gimp_dynamics_get_linear_value (dynamics,

@@ -32,9 +32,8 @@
 #include "core/gimpdynamics.h"
 #include "core/gimpimage.h"
 #include "core/gimppickable.h"
+#include "core/gimpsymmetry.h"
 #include "core/gimptempbuf.h"
-
-#include "gimpmultistroke.h"
 
 #include "gimpsmudge.h"
 #include "gimpsmudgeoptions.h"
@@ -47,17 +46,17 @@ static void       gimp_smudge_finalize     (GObject          *object);
 static void       gimp_smudge_paint        (GimpPaintCore    *paint_core,
                                             GimpDrawable     *drawable,
                                             GimpPaintOptions *paint_options,
-                                            GimpMultiStroke  *mstroke,
+                                            GimpSymmetry     *sym,
                                             GimpPaintState    paint_state,
                                             guint32           time);
 static gboolean   gimp_smudge_start        (GimpPaintCore    *paint_core,
                                             GimpDrawable     *drawable,
                                             GimpPaintOptions *paint_options,
-                                            GimpMultiStroke  *mstroke);
+                                            GimpSymmetry     *sym);
 static void       gimp_smudge_motion       (GimpPaintCore    *paint_core,
                                             GimpDrawable     *drawable,
                                             GimpPaintOptions *paint_options,
-                                            GimpMultiStroke  *mstroke);
+                                            GimpSymmetry     *sym);
 
 static void       gimp_smudge_accumulator_coords (GimpPaintCore    *paint_core,
                                                   const GimpCoords *coords,
@@ -132,7 +131,7 @@ static void
 gimp_smudge_paint (GimpPaintCore    *paint_core,
                    GimpDrawable     *drawable,
                    GimpPaintOptions *paint_options,
-                   GimpMultiStroke  *mstroke,
+                   GimpSymmetry     *sym,
                    GimpPaintState    paint_state,
                    guint32           time)
 {
@@ -144,10 +143,10 @@ gimp_smudge_paint (GimpPaintCore    *paint_core,
       /* initialization fails if the user starts outside the drawable */
       if (! smudge->initialized)
         smudge->initialized = gimp_smudge_start (paint_core, drawable,
-                                                 paint_options, mstroke);
+                                                 paint_options, sym);
 
       if (smudge->initialized)
-        gimp_smudge_motion (paint_core, drawable, paint_options, mstroke);
+        gimp_smudge_motion (paint_core, drawable, paint_options, sym);
       break;
 
     case GIMP_PAINT_STATE_FINISH:
@@ -174,7 +173,7 @@ static gboolean
 gimp_smudge_start (GimpPaintCore    *paint_core,
                    GimpDrawable     *drawable,
                    GimpPaintOptions *paint_options,
-                   GimpMultiStroke  *mstroke)
+                   GimpSymmetry     *sym)
 {
   GimpSmudge *smudge = GIMP_SMUDGE (paint_core);
   GeglBuffer *paint_buffer;
@@ -186,12 +185,12 @@ gimp_smudge_start (GimpPaintCore    *paint_core,
   gint        i;
   gint        x, y;
 
-  nstrokes = gimp_multi_stroke_get_size (mstroke);
+  nstrokes = gimp_symmetry_get_size (sym);
   for (i = 0; i < nstrokes; i++)
     {
       GeglBuffer *accum_buffer;
 
-      coords = gimp_multi_stroke_get_coords (mstroke, i);
+      coords = gimp_symmetry_get_coords (sym, i);
       paint_buffer = gimp_paint_core_get_paint_buffer (paint_core, drawable,
                                                        paint_options, coords,
                                                        &paint_buffer_x,
@@ -260,7 +259,7 @@ static void
 gimp_smudge_motion (GimpPaintCore    *paint_core,
                     GimpDrawable     *drawable,
                     GimpPaintOptions *paint_options,
-                    GimpMultiStroke  *mstroke)
+                    GimpSymmetry     *sym)
 {
   GimpSmudge         *smudge   = GIMP_SMUDGE (paint_core);
   GimpSmudgeOptions  *options  = GIMP_SMUDGE_OPTIONS (paint_options);
@@ -288,10 +287,10 @@ gimp_smudge_motion (GimpPaintCore    *paint_core,
   fade_point = gimp_paint_options_get_fade (paint_options, image,
                                             paint_core->pixel_dist);
 
-  nstrokes = gimp_multi_stroke_get_size (mstroke);
+  nstrokes = gimp_symmetry_get_size (sym);
   for (i = 0; i < nstrokes; i++)
     {
-      coords = gimp_multi_stroke_get_coords (mstroke, i);
+      coords = gimp_symmetry_get_coords (sym, i);
 
       opacity = gimp_dynamics_get_linear_value (dynamics,
                                                 GIMP_DYNAMICS_OUTPUT_OPACITY,
@@ -310,9 +309,9 @@ gimp_smudge_motion (GimpPaintCore    *paint_core,
       if (! paint_buffer)
         continue;
 
-      op = gimp_multi_stroke_get_operation (mstroke, i,
-                                            paint_width,
-                                            paint_height);
+      op = gimp_symmetry_get_operation (sym, i,
+                                        paint_width,
+                                        paint_height);
 
       paint_buffer_width  = gegl_buffer_get_width  (paint_buffer);
       paint_buffer_height = gegl_buffer_get_height (paint_buffer);

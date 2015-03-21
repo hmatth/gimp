@@ -31,9 +31,8 @@
 #include "core/gimpdrawable.h"
 #include "core/gimpimage.h"
 #include "core/gimpimage-undo.h"
+#include "core/gimpsymmetry.h"
 #include "core/gimptempbuf.h"
-
-#include "gimpmultistroke.h"
 
 #include "gimpinkoptions.h"
 #include "gimpink.h"
@@ -53,7 +52,7 @@ static void         gimp_ink_finalize         (GObject          *object);
 static void         gimp_ink_paint            (GimpPaintCore    *paint_core,
                                                GimpDrawable     *drawable,
                                                GimpPaintOptions *paint_options,
-                                               GimpMultiStroke  *mstroke,
+                                               GimpSymmetry     *sym,
                                                GimpPaintState    paint_state,
                                                guint32           time);
 static GeglBuffer * gimp_ink_get_paint_buffer (GimpPaintCore    *paint_core,
@@ -71,7 +70,7 @@ static GimpUndo   * gimp_ink_push_undo        (GimpPaintCore    *core,
 static void         gimp_ink_motion           (GimpPaintCore    *paint_core,
                                                GimpDrawable     *drawable,
                                                GimpPaintOptions *paint_options,
-                                               GimpMultiStroke  *mstroke,
+                                               GimpSymmetry     *sym,
                                                guint32           time);
 
 static GimpBlob   * ink_pen_ellipse           (GimpInkOptions   *options,
@@ -146,7 +145,7 @@ static void
 gimp_ink_paint (GimpPaintCore    *paint_core,
                 GimpDrawable     *drawable,
                 GimpPaintOptions *paint_options,
-                GimpMultiStroke  *mstroke,
+                GimpSymmetry     *sym,
                 GimpPaintState    paint_state,
                 guint32           time)
 {
@@ -155,7 +154,7 @@ gimp_ink_paint (GimpPaintCore    *paint_core,
   GimpCoords  last_coords;
 
   gimp_paint_core_get_last_coords (paint_core, &last_coords);
-  cur_coords = gimp_multi_stroke_get_origin (mstroke);
+  cur_coords = gimp_symmetry_get_origin (sym);
 
   switch (paint_state)
     {
@@ -205,7 +204,7 @@ gimp_ink_paint (GimpPaintCore    *paint_core,
 
     case GIMP_PAINT_STATE_MOTION:
       gimp_ink_motion (paint_core, drawable, paint_options,
-                       mstroke, time);
+                       sym, time);
       break;
 
     case GIMP_PAINT_STATE_FINISH:
@@ -290,7 +289,7 @@ static void
 gimp_ink_motion (GimpPaintCore    *paint_core,
                  GimpDrawable     *drawable,
                  GimpPaintOptions *paint_options,
-                 GimpMultiStroke  *mstroke,
+                 GimpSymmetry     *sym,
                  guint32           time)
 {
   GimpInk        *ink             = GIMP_INK (paint_core);
@@ -308,7 +307,7 @@ gimp_ink_motion (GimpPaintCore    *paint_core,
   gint            nstrokes;
   gint            i;
 
-  nstrokes = gimp_multi_stroke_get_size (mstroke);
+  nstrokes = gimp_symmetry_get_size (sym);
 
   if (ink->last_blobs &&
       g_list_length (ink->last_blobs) != nstrokes)
@@ -327,7 +326,7 @@ gimp_ink_motion (GimpPaintCore    *paint_core,
 
       for (i = 0; i < nstrokes; i++)
         {
-          coords = gimp_multi_stroke_get_coords (mstroke, i);
+          coords = gimp_symmetry_get_coords (sym, i);
 
           last_blob = ink_pen_ellipse (options,
                                        coords->x,
@@ -354,7 +353,7 @@ gimp_ink_motion (GimpPaintCore    *paint_core,
           GimpBlob *blob;
           GimpBlob *blob_union = NULL;
 
-          coords = gimp_multi_stroke_get_coords (mstroke, i);
+          coords = gimp_symmetry_get_coords (sym, i);
           blob = ink_pen_ellipse (options,
                                   coords->x,
                                   coords->y,
@@ -380,7 +379,7 @@ gimp_ink_motion (GimpPaintCore    *paint_core,
     {
       GimpBlob *blob_to_render = g_list_nth_data (blobs_to_render, i);
 
-      coords = gimp_multi_stroke_get_coords (mstroke, i);
+      coords = gimp_symmetry_get_coords (sym, i);
 
       ink->cur_blob = blob_to_render;
       paint_buffer = gimp_paint_core_get_paint_buffer (paint_core, drawable,
