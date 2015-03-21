@@ -142,14 +142,14 @@ gimp_convolve_motion (GimpPaintCore    *paint_core,
   const GimpCoords    *coords;
   GeglNode            *op;
   gint                 paint_width, paint_height;
-  gint                 nstrokes;
+  gint                 n_strokes;
   gint                 i;
 
-  nstrokes = gimp_symmetry_get_size (sym);
+  n_strokes = gimp_symmetry_get_size (sym);
   fade_point = gimp_paint_options_get_fade (paint_options, image,
                                             paint_core->pixel_dist);
 
-  for (i = 0; i < nstrokes; i++)
+  for (i = 0; i < n_strokes; i++)
     {
       coords = gimp_symmetry_get_coords (sym, i);
 

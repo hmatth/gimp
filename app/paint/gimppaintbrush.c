@@ -125,11 +125,11 @@ _gimp_paintbrush_motion (GimpPaintCore    *paint_core,
   const GimpCoords         *coords;
   GeglNode                 *op;
   gint                      i;
-  gint                      nstrokes;
+  gint                      n_strokes;
 
   image = gimp_item_get_image (GIMP_ITEM (drawable));
 
-  nstrokes = gimp_symmetry_get_size (sym);
+  n_strokes = gimp_symmetry_get_size (sym);
 
   fade_point = gimp_paint_options_get_fade (paint_options, image,
                                             paint_core->pixel_dist);
@@ -152,7 +152,8 @@ _gimp_paintbrush_motion (GimpPaintCore    *paint_core,
                                                paint_options,
                                                fade_point);
 
-  for (i = 0; i < nstrokes; i++)
+
+  for (i = 0; i < n_strokes; i++)
     {
       gint paint_width, paint_height;
 

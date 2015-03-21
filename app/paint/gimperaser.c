@@ -119,7 +119,7 @@ gimp_eraser_motion (GimpPaintCore    *paint_core,
   gdouble               force;
   const GimpCoords     *coords;
   GeglNode             *op;
-  gint                  nstrokes;
+  gint                  n_strokes;
   gint                  paint_width, paint_height;
   gint                  i;
 
@@ -136,9 +136,9 @@ gimp_eraser_motion (GimpPaintCore    *paint_core,
   else
     paint_mode = GIMP_NORMAL_MODE;
 
-  nstrokes = gimp_symmetry_get_size (sym);
+  n_strokes = gimp_symmetry_get_size (sym);
 
-  for (i = 0; i < nstrokes; i++)
+  for (i = 0; i < n_strokes; i++)
     {
       coords = gimp_symmetry_get_coords (sym, i);
 

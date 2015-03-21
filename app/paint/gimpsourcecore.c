@@ -379,14 +379,14 @@ gimp_source_core_motion (GimpSourceCore   *source_core,
   GeglNode          *op;
   GimpCoords        *origin;
   GimpCoords        *coords;
-  gint               nstrokes;
+  gint               n_strokes;
   gint               i;
 
   fade_point = gimp_paint_options_get_fade (paint_options, image,
                                             paint_core->pixel_dist);
 
   origin   = gimp_symmetry_get_origin (sym);
-  nstrokes = gimp_symmetry_get_size (sym);
+  n_strokes = gimp_symmetry_get_size (sym);
 
   /* Some settings are based on the original stroke. */
   opacity = gimp_dynamics_get_linear_value (dynamics,
@@ -421,7 +421,7 @@ gimp_source_core_motion (GimpSourceCore   *source_core,
       gimp_pickable_flush (src_pickable);
     }
 
-  for (i = 0; i < nstrokes; i++)
+  for (i = 0; i < n_strokes; i++)
     {
       coords = gimp_symmetry_get_coords (sym, i);
 

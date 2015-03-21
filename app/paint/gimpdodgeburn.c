@@ -125,11 +125,11 @@ gimp_dodge_burn_motion (GimpPaintCore    *paint_core,
   const GimpCoords     *coords;
   GeglNode             *op;
   gint                  paint_width, paint_height;
-  gint                  nstrokes;
+  gint                  n_strokes;
   gint                  i;
 
-  nstrokes = gimp_symmetry_get_size (sym);
-  for (i = 0; i < nstrokes; i++)
+  n_strokes = gimp_symmetry_get_size (sym);
+  for (i = 0; i < n_strokes; i++)
     {
       coords = gimp_symmetry_get_coords (sym, i);
 

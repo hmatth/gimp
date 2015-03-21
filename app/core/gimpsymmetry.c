@@ -70,7 +70,7 @@ static GeglNode *
                                            gint          paint_height);
 static GParamSpec **
           gimp_symmetry_real_get_settings (GimpSymmetry *sym,
-                                           guint        *nproperties);
+                                           guint        *n_properties);
 
 G_DEFINE_TYPE (GimpSymmetry, gimp_symmetry, GIMP_TYPE_OBJECT)
 
@@ -215,9 +215,9 @@ gimp_symmetry_real_get_op (GimpSymmetry *sym,
 
 static GParamSpec **
 gimp_symmetry_real_get_settings (GimpSymmetry *sym,
-                                 guint        *nproperties)
+                                 guint        *n_properties)
 {
-  *nproperties = 0;
+  *n_properties = 0;
 
   return NULL;
 }
@@ -335,7 +335,7 @@ gimp_symmetry_get_operation (GimpSymmetry *sym,
 /**
  * gimp_symmetry_get_settings:
  * @sym:     the #GimpSymmetry
- * @nproperties: the number of properties in the returned array
+ * @n_properties: the number of properties in the returned array
  *
  * Returns an array of the symmetry properties which are supposed to
  * be settable by the user.
@@ -343,18 +343,18 @@ gimp_symmetry_get_operation (GimpSymmetry *sym,
  **/
 GParamSpec **
 gimp_symmetry_get_settings (GimpSymmetry *sym,
-                            guint        *nproperties)
+                            guint        *n_properties)
 {
   g_return_val_if_fail (GIMP_IS_SYMMETRY (sym), NULL);
 
   return GIMP_SYMMETRY_GET_CLASS (sym)->get_settings (sym,
-                                                      nproperties);
+                                                      n_properties);
 }
 
 /**
  * gimp_symmetry_get_xcf_settings:
  * @sym:         the #GimpSymmetry
- * @nproperties: the number of properties in the returned array
+ * @n_properties: the number of properties in the returned array
  *
  * Returns an array of the symmetry properties which are to be serialized
  * when saving to XCF.
@@ -365,10 +365,10 @@ gimp_symmetry_get_settings (GimpSymmetry *sym,
  **/
 GParamSpec **
 gimp_symmetry_get_xcf_settings (GimpSymmetry *sym,
-                                guint        *nproperties)
+                                guint        *n_properties)
 {
   g_return_val_if_fail (GIMP_IS_SYMMETRY (sym), NULL);
 
   return GIMP_SYMMETRY_GET_CLASS (sym)->get_xcf_settings (sym,
-                                                          nproperties);
+                                                          n_properties);
 }

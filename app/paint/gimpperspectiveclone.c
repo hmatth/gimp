@@ -289,11 +289,11 @@ gimp_perspective_clone_paint (GimpPaintCore    *paint_core,
 
           gint        dest_x;
           gint        dest_y;
-          gint        nstrokes;
+          gint        n_strokes;
           gint        i;
 
-          nstrokes = gimp_symmetry_get_size (sym);
-          for (i = 0; i < nstrokes; i++)
+          n_strokes = gimp_symmetry_get_size (sym);
+          for (i = 0; i < n_strokes; i++)
             {
               coords = gimp_symmetry_get_coords (sym, i);
 

@@ -181,12 +181,12 @@ gimp_smudge_start (GimpPaintCore    *paint_core,
   gint        paint_buffer_x;
   gint        paint_buffer_y;
   gint        accum_size;
-  gint        nstrokes;
+  gint        n_strokes;
   gint        i;
   gint        x, y;
 
-  nstrokes = gimp_symmetry_get_size (sym);
-  for (i = 0; i < nstrokes; i++)
+  n_strokes = gimp_symmetry_get_size (sym);
+  for (i = 0; i < n_strokes; i++)
     {
       GeglBuffer *accum_buffer;
 
@@ -281,14 +281,14 @@ gimp_smudge_motion (GimpPaintCore    *paint_core,
   GimpCoords         *coords;
   GeglNode           *op;
   gint                paint_width, paint_height;
-  gint                nstrokes;
+  gint                n_strokes;
   gint                i;
 
   fade_point = gimp_paint_options_get_fade (paint_options, image,
                                             paint_core->pixel_dist);
 
-  nstrokes = gimp_symmetry_get_size (sym);
-  for (i = 0; i < nstrokes; i++)
+  n_strokes = gimp_symmetry_get_size (sym);
+  for (i = 0; i < n_strokes; i++)
     {
       coords = gimp_symmetry_get_coords (sym, i);
 

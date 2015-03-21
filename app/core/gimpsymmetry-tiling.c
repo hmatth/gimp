@@ -72,7 +72,7 @@ static GeglNode * gimp_tiling_get_operation      (GimpSymmetry *tiling,
                                                   gint          paint_width,
                                                   gint          paint_height);
 static GParamSpec ** gimp_tiling_get_settings    (GimpSymmetry *sym,
-                                                  guint        *nsettings);
+                                                  guint        *n_settings);
 static void
                gimp_tiling_image_size_changed_cb (GimpImage    *image ,
                                                   gint          previous_origin_x,
@@ -353,11 +353,11 @@ gimp_tiling_get_operation (GimpSymmetry *sym,
 
 static GParamSpec **
 gimp_tiling_get_settings (GimpSymmetry *sym,
-                          guint        *nsettings)
+                          guint        *n_settings)
 {
   GParamSpec **pspecs;
 
-  *nsettings = 6;
+  *n_settings = 6;
   pspecs = g_new (GParamSpec*, 6);
 
   pspecs[0] = g_object_class_find_property (G_OBJECT_GET_CLASS (sym),
