@@ -69,6 +69,9 @@ static void       gimp_mirror_get_property        (GObject         *object,
 static void       gimp_mirror_update_strokes      (GimpMultiStroke *mirror,
                                                    GimpDrawable    *drawable,
                                                    GimpCoords      *origin);
+static void       gimp_mirror_prepare_operations  (GimpMirror      *mirror,
+                                                   gint             paint_width,
+                                                   gint             paint_height);
 static GeglNode * gimp_mirror_get_operation       (GimpMultiStroke *mirror,
                                                    gint             stroke,
                                                    gint             paint_width,
@@ -168,6 +171,18 @@ gimp_mirror_finalize (GObject *object)
   if (mirror->vertical_guide)
     g_object_unref (mirror->vertical_guide);
   mirror->vertical_guide = NULL;
+
+  if (mirror->horizontal_op)
+    g_object_unref (mirror->horizontal_op);
+  mirror->horizontal_op = NULL;
+
+  if (mirror->vertical_op)
+    g_object_unref (mirror->vertical_op);
+  mirror->vertical_op = NULL;
+
+  if (mirror->central_op)
+    g_object_unref (mirror->central_op);
+  mirror->central_op = NULL;
 
   G_OBJECT_CLASS (parent_class)->finalize (object);
 }
@@ -286,6 +301,59 @@ gimp_mirror_update_strokes (GimpMultiStroke *mstroke,
   g_signal_emit_by_name (mstroke, "strokes-updated", mstroke->image);
 }
 
+static void gimp_mirror_prepare_operations (GimpMirror *mirror,
+                                            gint        paint_width,
+                                            gint        paint_height)
+{
+  if (paint_width == mirror->last_paint_width &&
+      paint_height == mirror->last_paint_height)
+    return;
+
+  mirror->last_paint_width  = paint_width;
+  mirror->last_paint_height = paint_height;
+
+  if (mirror->horizontal_op)
+    g_object_unref (mirror->horizontal_op);
+
+  mirror->horizontal_op = gegl_node_new_child (NULL,
+                                               "operation", "gegl:reflect",
+                                               "origin-x", 0.0,
+                                               "origin-y",
+                                               (gdouble) paint_height / 2.0,
+                                               "x",
+                                               1.0,
+                                               "y",
+                                               0.0,
+                                               NULL);
+
+  if (mirror->vertical_op)
+    g_object_unref (mirror->vertical_op);
+
+  mirror->vertical_op = gegl_node_new_child (NULL,
+                                             "operation", "gegl:reflect",
+                                             "origin-x",
+                                             (gdouble) paint_width / 2.0,
+                                             "origin-y", 0.0,
+                                             "x",
+                                             0.0,
+                                             "y",
+                                             1.0,
+                                             NULL);
+
+  if (mirror->central_op)
+    g_object_unref (mirror->central_op);
+
+  mirror->central_op = gegl_node_new_child (NULL,
+                                            "operation", "gegl:rotate",
+                                            "origin-x",
+                                            (gdouble) paint_width / 2.0,
+                                            "origin-y",
+                                            (gdouble) paint_height / 2.0,
+                                            "degrees",
+                                            180.0,
+                                            NULL);
+}
+
 static GeglNode *
 gimp_mirror_get_operation (GimpMultiStroke *mstroke,
                            gint             stroke,
@@ -298,52 +366,20 @@ gimp_mirror_get_operation (GimpMultiStroke *mstroke,
   g_return_val_if_fail (stroke >= 0 &&
                         stroke < g_list_length (mstroke->strokes), NULL);
 
+  gimp_mirror_prepare_operations (mirror, paint_width, paint_height);
+
   if (mirror->disable_transformation || stroke == 0 ||
       paint_width == 0 || paint_height == 0)
-    {
-      op = NULL;
-    }
+    op = NULL;
   else if (stroke == 1 && mirror->horizontal_mirror)
-    {
-      op = gegl_node_new_child (NULL,
-                                "operation", "gegl:reflect",
-                                "origin-x", 0.0,
-                                "origin-y",
-                                (gdouble) paint_height / 2.0,
-                                "x",
-                                1.0,
-                                "y",
-                                0.0,
-                                NULL);
-    }
+    op = g_object_ref (mirror->horizontal_op);
   else if ((stroke == 2 && mirror->horizontal_mirror &&
             mirror->vertical_mirror) ||
            (stroke == 1 && mirror->vertical_mirror &&
             !  mirror->horizontal_mirror))
-    {
-      op = gegl_node_new_child (NULL,
-                                "operation", "gegl:reflect",
-                                "origin-x",
-                                (gdouble) paint_width / 2.0,
-                                "origin-y", 0.0,
-                                "x",
-                                0.0,
-                                "y",
-                                1.0,
-                                NULL);
-    }
+    op = g_object_ref (mirror->vertical_op);
   else
-    {
-      op = gegl_node_new_child (NULL,
-                                "operation", "gegl:rotate",
-                                "origin-x",
-                                (gdouble) paint_width / 2.0,
-                                "origin-y",
-                                (gdouble) paint_height / 2.0,
-                                "degrees",
-                                180.0,
-                                NULL);
-    }
+    op = g_object_ref (mirror->central_op);
 
   return op;
 }

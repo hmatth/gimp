@@ -47,6 +47,13 @@ struct _GimpMirror
   gdouble          vertical_position;
   GimpMirrorGuide *horizontal_guide;
   GimpMirrorGuide *vertical_guide;
+
+  /* Cached data */
+  gint             last_paint_width;
+  gint             last_paint_height;
+  GeglNode        *horizontal_op;
+  GeglNode        *vertical_op;
+  GeglNode        *central_op;
 };
 
 struct _GimpMirrorClass

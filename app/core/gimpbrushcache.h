@@ -41,14 +41,7 @@ struct _GimpBrushCache
 
   GDestroyNotify  data_destroy;
 
-  gpointer        last_data;
-  GeglNode       *last_op;
-  gint            last_width;
-  gint            last_height;
-  gdouble         last_scale;
-  gdouble         last_aspect_ratio;
-  gdouble         last_angle;
-  gdouble         last_hardness;
+  GList          *cached_units;
 
   gchar           debug_hit;
   gchar           debug_miss;
