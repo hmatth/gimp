@@ -363,6 +363,8 @@ gimp_source_core_motion (GimpSourceCore   *source_core,
   GimpPickable      *src_pickable = NULL;
   GeglBuffer        *src_buffer   = NULL;
   GeglRectangle      src_rect;
+  gint               base_src_offset_x;
+  gint               base_src_offset_y;
   gint               src_offset_x;
   gint               src_offset_y;
   GeglBuffer        *paint_buffer;
@@ -386,41 +388,42 @@ gimp_source_core_motion (GimpSourceCore   *source_core,
   origin   = gimp_multi_stroke_get_origin (mstroke);
   nstrokes = gimp_multi_stroke_get_size (mstroke);
 
+  /* Some settings are based on the original stroke. */
+  opacity = gimp_dynamics_get_linear_value (dynamics,
+                                            GIMP_DYNAMICS_OUTPUT_OPACITY,
+                                            origin,
+                                            paint_options,
+                                            fade_point);
+  if (opacity == 0.0)
+    return;
+
+  base_src_offset_x = source_core->offset_x;
+  base_src_offset_y = source_core->offset_y;
+
+  if (gimp_source_core_use_source (source_core, options))
+    {
+      src_pickable = GIMP_PICKABLE (source_core->src_drawable);
+
+      if (options->sample_merged)
+        {
+          GimpImage *src_image = gimp_pickable_get_image (src_pickable);
+          gint       off_x, off_y;
+
+          src_pickable = GIMP_PICKABLE (src_image);
+
+          gimp_item_get_offset (GIMP_ITEM (source_core->src_drawable),
+                                &off_x, &off_y);
+
+          base_src_offset_x += off_x;
+          base_src_offset_y += off_y;
+        }
+
+      gimp_pickable_flush (src_pickable);
+    }
+
   for (i = 0; i < nstrokes; i++)
     {
       coords = gimp_multi_stroke_get_coords (mstroke, i);
-
-      opacity = gimp_dynamics_get_linear_value (dynamics,
-                                                GIMP_DYNAMICS_OUTPUT_OPACITY,
-                                                coords,
-                                                paint_options,
-                                                fade_point);
-      if (opacity == 0.0)
-        continue;
-
-      src_offset_x = source_core->offset_x;
-      src_offset_y = source_core->offset_y;
-
-      if (gimp_source_core_use_source (source_core, options))
-        {
-          src_pickable = GIMP_PICKABLE (source_core->src_drawable);
-
-          if (options->sample_merged)
-            {
-              GimpImage *src_image = gimp_pickable_get_image (src_pickable);
-              gint       off_x, off_y;
-
-              src_pickable = GIMP_PICKABLE (src_image);
-
-              gimp_item_get_offset (GIMP_ITEM (source_core->src_drawable),
-                                    &off_x, &off_y);
-
-              src_offset_x += off_x;
-              src_offset_y += off_y;
-            }
-
-          gimp_pickable_flush (src_pickable);
-        }
 
       paint_buffer = gimp_paint_core_get_paint_buffer (paint_core, drawable,
                                                        paint_options, coords,
@@ -435,6 +438,8 @@ gimp_source_core_motion (GimpSourceCore   *source_core,
       paint_area_width    = gegl_buffer_get_width  (paint_buffer);
       paint_area_height   = gegl_buffer_get_height (paint_buffer);
 
+      src_offset_x = base_src_offset_x;
+      src_offset_y = base_src_offset_y;
       if (gimp_source_core_use_source (source_core, options))
         {
           /* When using a source, use the same for every stroke. */
