@@ -127,9 +127,6 @@ gimp_tiling_class_init (GimpTilingClass *klass)
 static void
 gimp_tiling_init (GimpTiling *tiling)
 {
-  tiling->interval_x = 0.0;
-  tiling->interval_y = 0.0;
-  tiling->shift      = 0.0;
 }
 
 static void

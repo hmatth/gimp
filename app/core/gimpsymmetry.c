@@ -130,10 +130,6 @@ gimp_symmetry_class_init (GimpSymmetryClass *klass)
 static void
 gimp_symmetry_init (GimpSymmetry *sym)
 {
-  sym->image    = NULL;
-  sym->drawable = NULL;
-  sym->origin   = NULL;
-  sym->strokes  = NULL;
   sym->type     = G_TYPE_NONE;
 }
 

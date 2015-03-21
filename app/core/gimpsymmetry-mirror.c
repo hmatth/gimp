@@ -149,12 +149,6 @@ gimp_mirror_class_init (GimpMirrorClass *klass)
 static void
 gimp_mirror_init (GimpMirror *mirror)
 {
-  mirror->horizontal_mirror = FALSE;
-  mirror->vertical_mirror   = FALSE;
-  mirror->point_symmetry    = FALSE;
-
-  mirror->horizontal_guide  = NULL;
-  mirror->vertical_guide    = NULL;
 }
 
 static void
