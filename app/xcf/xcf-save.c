@@ -1051,6 +1051,7 @@ xcf_save_prop (XcfInfo    *info,
                     return FALSE;
                   }
               }
+            g_free (settings);
           }
 
         size = info->cp - base;
