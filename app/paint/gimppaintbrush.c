@@ -137,6 +137,8 @@ _gimp_paintbrush_motion (GimpPaintCore    *paint_core,
 
   for (i = 0; i < nstrokes; i++)
     {
+      gint paint_width, paint_height;
+
       coords = gimp_multi_stroke_get_coords (mstroke, i);
 
       opacity *= gimp_dynamics_get_linear_value (dynamics,
@@ -150,12 +152,15 @@ _gimp_paintbrush_motion (GimpPaintCore    *paint_core,
       paint_buffer = gimp_paint_core_get_paint_buffer (paint_core, drawable,
                                                        paint_options, coords,
                                                        &paint_buffer_x,
-                                                       &paint_buffer_y);
+                                                       &paint_buffer_y,
+                                                       &paint_width,
+                                                       &paint_height);
       if (! paint_buffer)
         continue;
 
-      op = gimp_multi_stroke_get_operation (mstroke, paint_core,
-                                            paint_buffer, i);
+      op = gimp_multi_stroke_get_operation (mstroke, i,
+                                            paint_width,
+                                            paint_height);
       paint_appl_mode = paint_options->application_mode;
 
       grad_point = gimp_dynamics_get_linear_value (dynamics,

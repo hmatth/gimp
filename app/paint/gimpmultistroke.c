@@ -66,9 +66,9 @@ static void
                                                GimpCoords      *origin);
 static GeglNode *
             gimp_multi_stroke_real_get_op     (GimpMultiStroke *mstroke,
-                                               GimpPaintCore   *core,
-                                               GeglBuffer      *paint_buffer,
-                                               gint             stroke);
+                                               gint             stroke,
+                                               gint             paint_width,
+                                               gint             paint_height);
 static GParamSpec **
             gimp_multi_stroke_real_get_settings (GimpMultiStroke *mstroke,
                                                  guint           *nproperties);
@@ -205,9 +205,9 @@ gimp_multi_stroke_real_update_strokes (GimpMultiStroke *mstroke,
 
 static GeglNode *
 gimp_multi_stroke_real_get_op (GimpMultiStroke *mstroke,
-                               GimpPaintCore   *core,
-                               GeglBuffer      *paint_buffer,
-                               gint             stroke)
+                               gint             stroke,
+                               gint             paint_width,
+                               gint             paint_height)
 {
   /* The basic multi-stroke just returns NULL, since no transformation of the
    * brush painting happen. */
@@ -320,16 +320,16 @@ gimp_multi_stroke_get_coords (GimpMultiStroke *mstroke,
  **/
 GeglNode *
 gimp_multi_stroke_get_operation (GimpMultiStroke *mstroke,
-                                 GimpPaintCore   *core,
-                                 GeglBuffer      *paint_buffer,
-                                 gint             stroke)
+                                 gint             stroke,
+                                 gint             paint_width,
+                                 gint             paint_height)
 {
   g_return_val_if_fail (GIMP_IS_MULTI_STROKE (mstroke), NULL);
 
   return GIMP_MULTI_STROKE_GET_CLASS (mstroke)->get_operation (mstroke,
-                                                               core,
-                                                               paint_buffer,
-                                                               stroke);
+                                                               stroke,
+                                                               paint_width,
+                                                               paint_height);
 }
 
 /**

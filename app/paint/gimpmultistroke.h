@@ -58,9 +58,9 @@ struct _GimpMultiStrokeClass
                                              GimpDrawable    *drawable,
                                              GimpCoords      *origin);
   GeglNode * (* get_operation)              (GimpMultiStroke *mstroke,
-                                             GimpPaintCore   *core,
-                                             GeglBuffer      *paint_buffer,
-                                             gint             stroke);
+                                             gint             stroke,
+                                             gint             paint_width,
+                                             gint             paint_height);
   GParamSpec **
              (* get_settings)               (GimpMultiStroke *mstroke,
                                              guint           *nproperties);
@@ -81,9 +81,9 @@ gint         gimp_multi_stroke_get_size      (GimpMultiStroke *mstroke);
 GimpCoords * gimp_multi_stroke_get_coords    (GimpMultiStroke *mstroke,
                                               gint             stroke);
 GeglNode   * gimp_multi_stroke_get_operation (GimpMultiStroke *mstroke,
-                                              GimpPaintCore   *core,
-                                              GeglBuffer      *paint_buffer,
-                                              gint             stroke);
+                                              gint             stroke,
+                                              gint             paint_width,
+                                              gint             paint_height);
 GParamSpec ** gimp_multi_stroke_get_settings  (GimpMultiStroke *mstroke,
                                                guint           *nproperties);
 GParamSpec **

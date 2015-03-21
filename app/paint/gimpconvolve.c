@@ -142,6 +142,7 @@ gimp_convolve_motion (GimpPaintCore    *paint_core,
   gdouble              rate;
   const GimpCoords    *coords;
   GeglNode            *op;
+  gint                 paint_width, paint_height;
   gint                 nstrokes;
   gint                 i;
 
@@ -164,12 +165,15 @@ gimp_convolve_motion (GimpPaintCore    *paint_core,
       paint_buffer = gimp_paint_core_get_paint_buffer (paint_core, drawable,
                                                        paint_options, coords,
                                                        &paint_buffer_x,
-                                                       &paint_buffer_y);
+                                                       &paint_buffer_y,
+                                                       &paint_width,
+                                                       &paint_height);
       if (! paint_buffer)
         continue;
 
-      op = gimp_multi_stroke_get_operation (mstroke, paint_core,
-                                            paint_buffer, i);
+      op = gimp_multi_stroke_get_operation (mstroke, i,
+                                            paint_width,
+                                            paint_height);
 
       rate = (options->rate *
               gimp_dynamics_get_linear_value (dynamics,

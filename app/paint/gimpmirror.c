@@ -70,9 +70,9 @@ static void       gimp_mirror_update_strokes      (GimpMultiStroke *mirror,
                                                    GimpDrawable    *drawable,
                                                    GimpCoords      *origin);
 static GeglNode * gimp_mirror_get_operation       (GimpMultiStroke *mirror,
-                                                   GimpPaintCore   *core,
-                                                   GeglBuffer      *paint_buffer,
-                                                   gint             stroke);
+                                                   gint             stroke,
+                                                   gint             paint_width,
+                                                   gint             paint_height);
 static void       gimp_mirror_reset               (GimpMirror      *mirror);
 static void       gimp_mirror_guide_removed_cb    (GObject         *object,
                                                    GimpMirror      *mirror);
@@ -288,9 +288,9 @@ gimp_mirror_update_strokes (GimpMultiStroke *mstroke,
 
 static GeglNode *
 gimp_mirror_get_operation (GimpMultiStroke *mstroke,
-                           GimpPaintCore   *core,
-                           GeglBuffer      *paint_buffer,
-                           gint             stroke)
+                           gint             stroke,
+                           gint             paint_width,
+                           gint             paint_height)
 {
   GimpMirror *mirror  = GIMP_MIRROR (mstroke);
   GeglNode   *op;
@@ -298,24 +298,18 @@ gimp_mirror_get_operation (GimpMultiStroke *mstroke,
   g_return_val_if_fail (stroke >= 0 &&
                         stroke < g_list_length (mstroke->strokes), NULL);
 
-  if (mirror->disable_transformation || stroke == 0 || ! paint_buffer)
+  if (mirror->disable_transformation || stroke == 0 ||
+      paint_width == 0 || paint_height == 0)
     {
       op = NULL;
     }
   else if (stroke == 1 && mirror->horizontal_mirror)
     {
-      gint height;
-
-      if (GIMP_IS_SOURCE_CORE (core) || ! GIMP_IS_BRUSH_CORE (core))
-        height = gegl_buffer_get_height (paint_buffer);
-      else
-        height = gimp_brush_get_height (GIMP_BRUSH_CORE (core)->brush);
-
       op = gegl_node_new_child (NULL,
                                 "operation", "gegl:reflect",
                                 "origin-x", 0.0,
                                 "origin-y",
-                                (gdouble) height / 2.0,
+                                (gdouble) paint_height / 2.0,
                                 "x",
                                 1.0,
                                 "y",
@@ -327,17 +321,10 @@ gimp_mirror_get_operation (GimpMultiStroke *mstroke,
            (stroke == 1 && mirror->vertical_mirror &&
             !  mirror->horizontal_mirror))
     {
-      gint width;
-
-      if (GIMP_IS_SOURCE_CORE (core) || ! GIMP_IS_BRUSH_CORE (core))
-        width = gegl_buffer_get_width (paint_buffer);
-      else
-        width = gimp_brush_get_width (GIMP_BRUSH_CORE (core)->brush);
-
       op = gegl_node_new_child (NULL,
                                 "operation", "gegl:reflect",
                                 "origin-x",
-                                (gdouble) width / 2.0,
+                                (gdouble) paint_width / 2.0,
                                 "origin-y", 0.0,
                                 "x",
                                 0.0,
@@ -347,26 +334,12 @@ gimp_mirror_get_operation (GimpMultiStroke *mstroke,
     }
   else
     {
-      gint width;
-      gint height;
-
-      if (GIMP_IS_SOURCE_CORE (core) || ! GIMP_IS_BRUSH_CORE (core))
-        {
-          width  = gegl_buffer_get_width (paint_buffer);
-          height = gegl_buffer_get_height (paint_buffer);
-        }
-      else
-        {
-          width  = gimp_brush_get_width (GIMP_BRUSH_CORE (core)->brush);
-          height = gimp_brush_get_height (GIMP_BRUSH_CORE (core)->brush);
-        }
-
       op = gegl_node_new_child (NULL,
                                 "operation", "gegl:rotate",
                                 "origin-x",
-                                (gdouble) width / 2.0,
+                                (gdouble) paint_width / 2.0,
                                 "origin-y",
-                                (gdouble) height / 2.0,
+                                (gdouble) paint_height / 2.0,
                                 "degrees",
                                 180.0,
                                 NULL);

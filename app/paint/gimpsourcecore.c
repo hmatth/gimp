@@ -425,7 +425,8 @@ gimp_source_core_motion (GimpSourceCore   *source_core,
       paint_buffer = gimp_paint_core_get_paint_buffer (paint_core, drawable,
                                                        paint_options, coords,
                                                        &paint_buffer_x,
-                                                       &paint_buffer_y);
+                                                       &paint_buffer_y,
+                                                       NULL, NULL);
       if (! paint_buffer)
         continue;
 
@@ -462,8 +463,9 @@ gimp_source_core_motion (GimpSourceCore   *source_core,
       /*  Set the paint buffer to transparent  */
       gegl_buffer_clear (paint_buffer, NULL);
 
-      op = gimp_multi_stroke_get_operation (mstroke, paint_core,
-                                            paint_buffer, i);
+      op = gimp_multi_stroke_get_operation (mstroke, i,
+                                            gegl_buffer_get_width (paint_buffer),
+                                            gegl_buffer_get_height (paint_buffer));
       GIMP_SOURCE_CORE_GET_CLASS (source_core)->motion (source_core,
                                                         drawable,
                                                         paint_options,

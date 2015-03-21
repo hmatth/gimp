@@ -61,7 +61,9 @@ static GeglBuffer * gimp_ink_get_paint_buffer (GimpPaintCore    *paint_core,
                                                GimpPaintOptions *paint_options,
                                                const GimpCoords *coords,
                                                gint             *paint_buffer_x,
-                                               gint             *paint_buffer_y);
+                                               gint             *paint_buffer_y,
+                                               gint             *paint_width,
+                                               gint             *paint_height);
 static GimpUndo   * gimp_ink_push_undo        (GimpPaintCore    *core,
                                                GimpImage        *image,
                                                const gchar      *undo_desc);
@@ -217,7 +219,9 @@ gimp_ink_get_paint_buffer (GimpPaintCore    *paint_core,
                            GimpPaintOptions *paint_options,
                            const GimpCoords *coords,
                            gint             *paint_buffer_x,
-                           gint             *paint_buffer_y)
+                           gint             *paint_buffer_y,
+                           gint             *paint_width,
+                           gint             *paint_height)
 {
   GimpInk *ink = GIMP_INK (paint_core);
   gint     x, y;
@@ -234,6 +238,11 @@ gimp_ink_get_paint_buffer (GimpPaintCore    *paint_core,
   y1 = CLAMP (y / SUBSAMPLE - 1,            0, dheight);
   x2 = CLAMP ((x + width)  / SUBSAMPLE + 2, 0, dwidth);
   y2 = CLAMP ((y + height) / SUBSAMPLE + 2, 0, dheight);
+
+  if (*paint_width)
+    *paint_width = width / SUBSAMPLE + 3;
+  if (*paint_height)
+    *paint_height = height / SUBSAMPLE + 3;
 
   /*  configure the canvas buffer  */
   if ((x2 - x1) && (y2 - y1))
@@ -377,7 +386,8 @@ gimp_ink_motion (GimpPaintCore    *paint_core,
       paint_buffer = gimp_paint_core_get_paint_buffer (paint_core, drawable,
                                                        paint_options, coords,
                                                        &paint_buffer_x,
-                                                       &paint_buffer_y);
+                                                       &paint_buffer_y,
+                                                       NULL, NULL);
       ink->cur_blob = NULL;
 
       if (! paint_buffer)

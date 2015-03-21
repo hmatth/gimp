@@ -195,7 +195,8 @@ gimp_smudge_start (GimpPaintCore    *paint_core,
       paint_buffer = gimp_paint_core_get_paint_buffer (paint_core, drawable,
                                                        paint_options, coords,
                                                        &paint_buffer_x,
-                                                       &paint_buffer_y);
+                                                       &paint_buffer_y,
+                                                       NULL, NULL);
       if (! paint_buffer)
         return FALSE;
 
@@ -261,27 +262,28 @@ gimp_smudge_motion (GimpPaintCore    *paint_core,
                     GimpPaintOptions *paint_options,
                     GimpMultiStroke  *mstroke)
 {
-  GimpSmudge        *smudge   = GIMP_SMUDGE (paint_core);
-  GimpSmudgeOptions *options  = GIMP_SMUDGE_OPTIONS (paint_options);
-  GimpContext       *context  = GIMP_CONTEXT (paint_options);
-  GimpDynamics      *dynamics = GIMP_BRUSH_CORE (paint_core)->dynamics;
-  GimpImage         *image    = gimp_item_get_image (GIMP_ITEM (drawable));
-  GeglBuffer        *paint_buffer;
-  gint               paint_buffer_x;
-  gint               paint_buffer_y;
-  gint               paint_buffer_width;
-  gint               paint_buffer_height;
-  gdouble            fade_point;
-  gdouble            opacity;
-  gdouble            rate;
-  gdouble            dynamic_rate;
-  gint               x, y;
-  gdouble            force;
-  GeglBuffer        *accum_buffer;
-  GimpCoords        *coords;
-  GeglNode          *op;
-  gint               nstrokes;
-  gint               i;
+  GimpSmudge         *smudge   = GIMP_SMUDGE (paint_core);
+  GimpSmudgeOptions  *options  = GIMP_SMUDGE_OPTIONS (paint_options);
+  GimpContext        *context  = GIMP_CONTEXT (paint_options);
+  GimpDynamics       *dynamics = GIMP_BRUSH_CORE (paint_core)->dynamics;
+  GimpImage          *image    = gimp_item_get_image (GIMP_ITEM (drawable));
+  GeglBuffer         *paint_buffer;
+  gint                paint_buffer_x;
+  gint                paint_buffer_y;
+  gint                paint_buffer_width;
+  gint                paint_buffer_height;
+  gdouble             fade_point;
+  gdouble             opacity;
+  gdouble             rate;
+  gdouble             dynamic_rate;
+  gint                x, y;
+  gdouble             force;
+  GeglBuffer         *accum_buffer;
+  GimpCoords         *coords;
+  GeglNode           *op;
+  gint                paint_width, paint_height;
+  gint                nstrokes;
+  gint                i;
 
   fade_point = gimp_paint_options_get_fade (paint_options, image,
                                             paint_core->pixel_dist);
@@ -302,12 +304,15 @@ gimp_smudge_motion (GimpPaintCore    *paint_core,
       paint_buffer = gimp_paint_core_get_paint_buffer (paint_core, drawable,
                                                        paint_options, coords,
                                                        &paint_buffer_x,
-                                                       &paint_buffer_y);
+                                                       &paint_buffer_y,
+                                                       &paint_width,
+                                                       &paint_height);
       if (! paint_buffer)
         continue;
 
-      op = gimp_multi_stroke_get_operation (mstroke, paint_core,
-                                            paint_buffer, i);
+      op = gimp_multi_stroke_get_operation (mstroke, i,
+                                            paint_width,
+                                            paint_height);
 
       paint_buffer_width  = gegl_buffer_get_width  (paint_buffer);
       paint_buffer_height = gegl_buffer_get_height (paint_buffer);

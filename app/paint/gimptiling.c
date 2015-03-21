@@ -69,9 +69,9 @@ static void       gimp_tiling_update_strokes     (GimpMultiStroke *tiling,
                                                   GimpDrawable    *drawable,
                                                   GimpCoords      *origin);
 static GeglNode * gimp_tiling_get_operation      (GimpMultiStroke *tiling,
-                                                  GimpPaintCore   *core,
-                                                  GeglBuffer      *paint_buffer,
-                                                  gint             stroke);
+                                                  gint             stroke,
+                                                  gint             paint_width,
+                                                  gint             paint_height);
 static GParamSpec ** gimp_tiling_get_settings    (GimpMultiStroke *mstroke,
                                                   guint           *nsettings);
 static void
@@ -344,9 +344,9 @@ gimp_tiling_update_strokes (GimpMultiStroke *mstroke,
 
 static GeglNode *
 gimp_tiling_get_operation (GimpMultiStroke *mstroke,
-                           GimpPaintCore   *core,
-                           GeglBuffer      *paint_buffer,
-                           gint             stroke)
+                           gint             stroke,
+                           gint             paint_width,
+                           gint             paint_height)
 {
   /* No buffer transformation happens for tiling. */
   return NULL;

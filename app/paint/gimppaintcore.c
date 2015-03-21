@@ -107,7 +107,9 @@ static GeglBuffer *
                                                       GimpPaintOptions *options,
                                                       const GimpCoords *coords,
                                                       gint             *paint_buffer_x,
-                                                      gint             *paint_buffer_y);
+                                                      gint             *paint_buffer_y,
+                                                      gint             *paint_width,
+                                                      gint             *paint_height);
 static GimpUndo* gimp_paint_core_real_push_undo      (GimpPaintCore    *core,
                                                       GimpImage        *image,
                                                       const gchar      *undo_desc);
@@ -267,7 +269,9 @@ gimp_paint_core_real_get_paint_buffer (GimpPaintCore    *core,
                                        GimpPaintOptions *paint_options,
                                        const GimpCoords *coords,
                                        gint             *paint_buffer_x,
-                                       gint             *paint_buffer_y)
+                                       gint             *paint_buffer_y,
+                                       gint             *paint_width,
+                                       gint             *paint_height)
 {
   return NULL;
 }
@@ -765,7 +769,9 @@ gimp_paint_core_get_paint_buffer (GimpPaintCore    *core,
                                   GimpPaintOptions *paint_options,
                                   const GimpCoords *coords,
                                   gint             *paint_buffer_x,
-                                  gint             *paint_buffer_y)
+                                  gint             *paint_buffer_y,
+                                  gint             *paint_width,
+                                  gint             *paint_height)
 {
   GeglBuffer *paint_buffer;
 
@@ -782,7 +788,9 @@ gimp_paint_core_get_paint_buffer (GimpPaintCore    *core,
                                                         paint_options,
                                                         coords,
                                                         paint_buffer_x,
-                                                        paint_buffer_y);
+                                                        paint_buffer_y,
+                                                        paint_width,
+                                                        paint_height);
 
   core->paint_buffer_x = *paint_buffer_x;
   core->paint_buffer_y = *paint_buffer_y;

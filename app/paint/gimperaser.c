@@ -121,6 +121,7 @@ gimp_eraser_motion (GimpPaintCore    *paint_core,
   const GimpCoords     *coords;
   GeglNode             *op;
   gint                  nstrokes;
+  gint                  paint_width, paint_height;
   gint                  i;
 
   fade_point = gimp_paint_options_get_fade (paint_options, image,
@@ -162,12 +163,15 @@ gimp_eraser_motion (GimpPaintCore    *paint_core,
       paint_buffer = gimp_paint_core_get_paint_buffer (paint_core, drawable,
                                                        paint_options, coords,
                                                        &paint_buffer_x,
-                                                       &paint_buffer_y);
+                                                       &paint_buffer_y,
+                                                       &paint_width,
+                                                       &paint_height);
       if (! paint_buffer)
         continue;
 
-      op = gimp_multi_stroke_get_operation (mstroke, paint_core,
-                                            paint_buffer, i);
+      op = gimp_multi_stroke_get_operation (mstroke, i,
+                                            paint_width,
+                                            paint_height);
 
       gegl_buffer_set_color (paint_buffer, NULL, color);
 

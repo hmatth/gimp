@@ -84,7 +84,9 @@ static GeglBuffer * gimp_brush_core_get_paint_buffer(GimpPaintCore    *paint_cor
                                                      GimpPaintOptions *paint_options,
                                                      const GimpCoords *coords,
                                                      gint             *paint_buffer_x,
-                                                     gint             *paint_buffer_y);
+                                                     gint             *paint_buffer_y,
+                                                     gint             *paint_width,
+                                                     gint             *paint_height);
 
 static void      gimp_brush_core_real_set_brush     (GimpBrushCore    *core,
                                                      GimpBrush        *brush);
@@ -813,7 +815,9 @@ gimp_brush_core_get_paint_buffer (GimpPaintCore    *paint_core,
                                   GimpPaintOptions *paint_options,
                                   const GimpCoords *coords,
                                   gint             *paint_buffer_x,
-                                  gint             *paint_buffer_y)
+                                  gint             *paint_buffer_y,
+                                  gint             *paint_width,
+                                  gint             *paint_height)
 {
   GimpBrushCore *core = GIMP_BRUSH_CORE (paint_core);
   gint           x, y;
@@ -832,6 +836,11 @@ gimp_brush_core_get_paint_buffer (GimpPaintCore    *paint_core,
   gimp_brush_transform_size (core->brush,
                              core->scale, core->aspect_ratio, core->angle,
                              &brush_width, &brush_height);
+
+  if (paint_width)
+    *paint_width  = brush_width;
+  if (paint_height)
+    *paint_height = brush_height;
 
   /*  adjust the x and y coordinates to the upper left corner of the brush  */
   x = (gint) floor (coords->x) - (brush_width  / 2);
