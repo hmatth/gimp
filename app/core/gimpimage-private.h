@@ -83,7 +83,6 @@ struct _GimpImagePrivate
 
   GList             *symmetries;            /*  Painting symmetries          */
   GimpSymmetry      *selected_symmetry;     /*  Selected symmetry            */
-  GimpSymmetry      *id_symmetry;           /*  The base "Single" stroke     */
 
   GList             *guides;                /*  guides                       */
   GimpGrid          *grid;                  /*  grid                         */

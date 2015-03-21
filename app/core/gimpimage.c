@@ -698,8 +698,6 @@ gimp_image_init (GimpImage *image)
 
   private->symmetries          = NULL;
   private->selected_symmetry   = NULL;
-  private->id_symmetry         = gimp_image_symmetry_new (image,
-                                                          GIMP_TYPE_SYMMETRY);
 
   private->guides              = NULL;
   private->grid                = NULL;
@@ -1052,12 +1050,6 @@ gimp_image_finalize (GObject *object)
     {
       g_list_free_full (private->symmetries, g_object_unref);
       private->symmetries = NULL;
-    }
-
-  if (private->id_symmetry)
-    {
-      g_object_unref (private->id_symmetry);
-      private->id_symmetry = NULL;
     }
 
   if (private->grid)

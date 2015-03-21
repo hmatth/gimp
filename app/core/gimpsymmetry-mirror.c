@@ -434,7 +434,7 @@ gimp_mirror_guide_removed_cb (GObject    *object,
       GimpSymmetry *sym;
 
       sym = GIMP_SYMMETRY (mirror);
-      gimp_image_remove_symmetry (sym->image,
+      gimp_image_symmetry_remove (sym->image,
                                   GIMP_SYMMETRY (mirror));
     }
   else

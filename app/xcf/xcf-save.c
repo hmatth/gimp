@@ -363,9 +363,9 @@ xcf_save_image_props (XcfInfo    *info,
     xcf_check_error (xcf_save_prop (info, image, PROP_GUIDES, error,
                                     gimp_image_get_guides (image)));
 
-  if (gimp_image_get_symmetrys (image))
+  if (g_list_length (gimp_image_symmetry_get (image)))
     xcf_check_error (xcf_save_prop (info, image, PROP_SYMMETRY, error,
-                                    gimp_image_get_symmetrys (image)));
+                                    gimp_image_symmetry_get (image)));
 
   if (gimp_image_get_sample_points (image))
     xcf_check_error (xcf_save_prop (info, image, PROP_SAMPLE_POINTS, error,
@@ -931,12 +931,12 @@ xcf_save_prop (XcfInfo    *info,
 
         /* Index of active symmetry starting at 1
          * (because 0 means none active) */
-        if (gimp_image_get_selected_symmetry (image))
+        if (gimp_image_symmetry_selected (image))
           {
             for (i = 1, iter = syms; iter; iter = g_list_next (iter), i++)
               {
                 sym = GIMP_SYMMETRY (iter->data);
-                if (sym == gimp_image_get_selected_symmetry (image))
+                if (sym == gimp_image_symmetry_selected (image))
                   break;
               }
           }

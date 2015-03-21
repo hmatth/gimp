@@ -757,9 +757,7 @@ xcf_load_image_props (XcfInfo   *info,
                       g_free (name);
                       return FALSE;
                     }
-                  sym = gimp_image_symmetry_new (image, type);
-                  gimp_image_add_symmetry (image, sym);
-                  g_object_unref (sym);
+                  sym = gimp_image_symmetry_add (image, type);
 
                   settings = gimp_symmetry_get_xcf_settings (sym,
                                                              &nsettings);
@@ -849,7 +847,7 @@ xcf_load_image_props (XcfInfo   *info,
                   if (active == i)
                     active_sym = sym;
                 }
-              gimp_image_select_symmetry (image, active_sym->type);
+              gimp_image_symmetry_select (image, active_sym->type);
               g_free (name);
             }
           break;

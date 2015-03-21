@@ -586,16 +586,11 @@ gimp_paint_options_set_property (GObject      *object,
       options->symmetry = g_value_get_int (value);
       if (context && context->image)
         {
-          if (! gimp_image_select_symmetry (context->image,
+          if (! gimp_image_symmetry_select (context->image,
                                             options->symmetry))
             {
-              GimpSymmetry *mstroke;
-
-              mstroke  = gimp_image_symmetry_new (context->image,
-                                                  options->symmetry);
-              gimp_image_add_symmetry (context->image,
-                                       GIMP_SYMMETRY (mstroke));
-              g_object_unref (mstroke);
+              gimp_image_symmetry_add (context->image,
+                                       options->symmetry);
             }
         }
       else
@@ -1173,7 +1168,7 @@ gimp_paint_options_set_mstroke_props (GimpPaintOptions *src,
     {
       GimpSymmetry  *mstroke;
 
-      mstroke = gimp_image_get_selected_symmetry (image);
+      mstroke = gimp_image_symmetry_selected (image);
 
       g_object_set (dest,
                     "symmetry",

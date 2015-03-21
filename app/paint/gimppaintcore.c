@@ -325,10 +325,7 @@ gimp_paint_core_paint (GimpPaintCore    *core,
           core->last_paint.y = core->cur_coords.y;
         }
 
-      if (gimp_image_get_selected_symmetry (image))
-        sym = g_object_ref (gimp_image_get_selected_symmetry (image));
-      else
-        sym = g_object_ref (gimp_image_symmetry_get_id (image));
+      sym = g_object_ref (gimp_image_symmetry_selected (image));
       gimp_symmetry_set_origin (sym, drawable, &core->cur_coords);
 
       core_class->paint (core, drawable,

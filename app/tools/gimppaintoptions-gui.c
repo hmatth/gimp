@@ -643,7 +643,7 @@ gimp_paint_options_symmetry_update_cb (GimpSymmetry *sym,
 
   context = gimp_get_user_context (sym->image->gimp);
   if (image != context->image ||
-      sym != gimp_image_get_selected_symmetry (image))
+      sym != gimp_image_symmetry_selected (image))
     {
       g_signal_handlers_disconnect_by_func (G_OBJECT (sym),
                                             gimp_paint_options_symmetry_update_cb,
@@ -669,7 +669,7 @@ gimp_paint_options_symmetry_callback (GimpPaintOptions *options,
   image   = context->image;
 
   if (image &&
-      (sym = gimp_image_get_selected_symmetry (image)))
+      (sym = gimp_image_symmetry_selected (image)))
     {
       g_signal_connect (sym, "update-ui",
                         G_CALLBACK (gimp_paint_options_symmetry_update_cb),

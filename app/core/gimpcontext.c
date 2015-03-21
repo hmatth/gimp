@@ -1927,7 +1927,7 @@ gimp_context_real_set_image (GimpContext *context,
       paint_options = GIMP_PAINT_OPTIONS (context->tool_info->tool_options);
 
       if (image)
-        sym = gimp_image_get_selected_symmetry (image);
+        sym = gimp_image_symmetry_selected (image);
 
       g_object_set (paint_options, "symmetry",
                     sym ? sym->type : G_TYPE_NONE,
