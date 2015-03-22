@@ -137,11 +137,6 @@ gimp_tiling_constructed (GObject *object)
 
   sym = GIMP_SYMMETRY (object);
 
-  // TODO: can I have it in property and still save it in parent? Test.
-  // Also connect on image changing size.
-  // Connect to either GimpImage::size-changed-detailed
-  // or GimpViewable::size-changed
-  // see gimp_image_real_size_changed_detailed
   /* Update property values to actual image size. */
   dspec = G_PARAM_SPEC_DOUBLE (g_object_class_find_property (G_OBJECT_GET_CLASS (object),
                                                              "x-interval"));
