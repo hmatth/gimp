@@ -41,8 +41,8 @@ struct _GimpTiling
   gdouble       interval_x;
   gdouble       interval_y;
   gdouble       shift;
-  guint         max_x;
-  guint         max_y;
+  gint          max_x;
+  gint          max_y;
 };
 
 struct _GimpTilingClass
