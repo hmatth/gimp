@@ -70,7 +70,7 @@ static GeglNode *
                                            gint          paint_height);
 static GParamSpec **
           gimp_symmetry_real_get_settings (GimpSymmetry *sym,
-                                           guint        *n_properties);
+                                           gint         *n_properties);
 
 G_DEFINE_TYPE (GimpSymmetry, gimp_symmetry, GIMP_TYPE_OBJECT)
 
@@ -211,7 +211,7 @@ gimp_symmetry_real_get_op (GimpSymmetry *sym,
 
 static GParamSpec **
 gimp_symmetry_real_get_settings (GimpSymmetry *sym,
-                                 guint        *n_properties)
+                                 gint         *n_properties)
 {
   *n_properties = 0;
 
@@ -339,7 +339,7 @@ gimp_symmetry_get_operation (GimpSymmetry *sym,
  **/
 GParamSpec **
 gimp_symmetry_get_settings (GimpSymmetry *sym,
-                            guint        *n_properties)
+                            gint         *n_properties)
 {
   g_return_val_if_fail (GIMP_IS_SYMMETRY (sym), NULL);
 
@@ -361,7 +361,7 @@ gimp_symmetry_get_settings (GimpSymmetry *sym,
  **/
 GParamSpec **
 gimp_symmetry_get_xcf_settings (GimpSymmetry *sym,
-                                guint        *n_properties)
+                                gint         *n_properties)
 {
   g_return_val_if_fail (GIMP_IS_SYMMETRY (sym), NULL);
 

@@ -912,7 +912,7 @@ xcf_save_prop (XcfInfo    *info,
         GimpSymmetry  *sym;
         GParamSpec   **settings;
         GParamSpec    *spec;
-        guint          nsettings;
+        gint           n_settings;
         guint32        base;
         glong          pos;
         gint           i = 0;
@@ -955,9 +955,9 @@ xcf_save_prop (XcfInfo    *info,
             xcf_write_string_check_error (info, (gchar **) &name, 1);
 
             settings = gimp_symmetry_get_xcf_settings (sym,
-                                                       &nsettings);
+                                                       &n_settings);
 
-            for (i = 0; i < nsettings; i++)
+            for (i = 0; i < n_settings; i++)
               {
                 if (settings[i] == NULL)
                   continue;

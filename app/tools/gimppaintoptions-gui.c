@@ -686,7 +686,7 @@ gimp_paint_options_symmetry_ui (GimpSymmetry *sym,
   GimpSymmetryClass  *klass;
   GtkWidget          *vbox;
   GParamSpec        **specs;
-  guint               nproperties;
+  gint                n_properties;
   gint                i;
 
   /* Clean the old frame */
@@ -706,9 +706,9 @@ gimp_paint_options_symmetry_ui (GimpSymmetry *sym,
   gtk_container_add (GTK_CONTAINER (frame), vbox);
   gtk_widget_show (vbox);
 
-  specs = gimp_symmetry_get_settings (sym, &nproperties);
+  specs = gimp_symmetry_get_settings (sym, &n_properties);
 
-  for (i = 0; i < (gint) nproperties; i++)
+  for (i = 0; i < n_properties; i++)
     {
       GParamSpec  *spec;
       const gchar *name;

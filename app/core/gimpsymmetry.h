@@ -63,10 +63,10 @@ struct _GimpSymmetryClass
                                              gint          paint_height);
   GParamSpec **
              (* get_settings)               (GimpSymmetry *sym,
-                                             guint        *n_properties);
+                                             gint         *n_properties);
   GParamSpec **
              (* get_xcf_settings)           (GimpSymmetry *sym,
-                                             guint        *n_properties);
+                                             gint         *n_properties);
 };
 
 
@@ -85,8 +85,8 @@ GeglNode   * gimp_symmetry_get_operation    (GimpSymmetry *sym,
                                              gint          paint_width,
                                              gint          paint_height);
 GParamSpec ** gimp_symmetry_get_settings     (GimpSymmetry *sym,
-                                              guint        *n_properties);
+                                              gint         *n_properties);
 GParamSpec ** gimp_symmetry_get_xcf_settings (GimpSymmetry *sym,
-                                              guint        *n_properties);
+                                              gint         *n_properties);
 
 #endif  /*  __GIMP_SYMMETRY_H__  */

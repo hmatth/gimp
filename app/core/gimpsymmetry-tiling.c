@@ -72,7 +72,7 @@ static GeglNode * gimp_tiling_get_operation      (GimpSymmetry *tiling,
                                                   gint          paint_width,
                                                   gint          paint_height);
 static GParamSpec ** gimp_tiling_get_settings    (GimpSymmetry *sym,
-                                                  guint        *n_settings);
+                                                  gint         *n_settings);
 static void
                gimp_tiling_image_size_changed_cb (GimpImage    *image ,
                                                   gint          previous_origin_x,
@@ -114,14 +114,14 @@ gimp_tiling_class_init (GimpTilingClass *klass)
                                    "shift", _("X-shift between lines (pixels)"),
                                    0.0, 10000.0, 0.0,
                                    GIMP_PARAM_STATIC_STRINGS);
-  GIMP_CONFIG_INSTALL_PROP_UINT (object_class, PROP_X_MAX,
-                                 "x-max", _("Max strokes on x-axis"),
-                                 0, 100, 0,
-                                 GIMP_PARAM_STATIC_STRINGS);
-  GIMP_CONFIG_INSTALL_PROP_UINT (object_class, PROP_Y_MAX,
-                                 "y-max", _("Max strokes on y-axis"),
-                                 0, 100, 0,
-                                 GIMP_PARAM_STATIC_STRINGS);
+  GIMP_CONFIG_INSTALL_PROP_INT (object_class, PROP_X_MAX,
+                                "x-max", _("Max strokes on x-axis"),
+                                0, 100, 0,
+                                GIMP_PARAM_STATIC_STRINGS);
+  GIMP_CONFIG_INSTALL_PROP_INT (object_class, PROP_Y_MAX,
+                                "y-max", _("Max strokes on y-axis"),
+                                0, 100, 0,
+                                GIMP_PARAM_STATIC_STRINGS);
 }
 
 static void
@@ -234,12 +234,12 @@ gimp_tiling_set_property (GObject      *object,
         }
       break;
     case PROP_X_MAX:
-      tiling->max_x = g_value_get_uint (value);
+      tiling->max_x = g_value_get_int (value);
       if (sym->drawable)
         gimp_tiling_update_strokes (sym, sym->drawable, sym->origin);
       break;
     case PROP_Y_MAX:
-      tiling->max_y = g_value_get_uint (value);
+      tiling->max_y = g_value_get_int (value);
       if (sym->drawable)
         gimp_tiling_update_strokes (sym, sym->drawable, sym->origin);
       break;
@@ -269,10 +269,10 @@ gimp_tiling_get_property (GObject    *object,
       g_value_set_double (value, tiling->shift);
       break;
     case PROP_X_MAX:
-      g_value_set_uint (value, tiling->max_x);
+      g_value_set_int (value, tiling->max_x);
       break;
     case PROP_Y_MAX:
-      g_value_set_uint (value, tiling->max_y);
+      g_value_set_int (value, tiling->max_y);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -350,7 +350,7 @@ gimp_tiling_get_operation (GimpSymmetry *sym,
 
 static GParamSpec **
 gimp_tiling_get_settings (GimpSymmetry *sym,
-                          guint        *n_settings)
+                          gint         *n_settings)
 {
   GParamSpec **pspecs;
 

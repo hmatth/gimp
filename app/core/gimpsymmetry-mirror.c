@@ -81,9 +81,9 @@ static void       gimp_mirror_guide_position_cb   (GObject      *object,
                                                    GParamSpec   *pspec,
                                                    GimpMirror   *mirror);
 static GParamSpec ** gimp_mirror_get_settings     (GimpSymmetry *sym,
-                                                   guint        *n_settings);
+                                                   gint         *n_settings);
 static GParamSpec ** gimp_mirror_get_xcf_settings (GimpSymmetry *sym,
-                                                   guint        *n_settings);
+                                                   gint         *n_settings);
 static void  gimp_mirror_set_horizontal_symmetry  (GimpMirror   *mirror,
                                                    gboolean      active);
 static void    gimp_mirror_set_vertical_symmetry  (GimpMirror   *mirror,
@@ -458,7 +458,7 @@ gimp_mirror_guide_position_cb (GObject    *object,
 
 static GParamSpec **
 gimp_mirror_get_settings (GimpSymmetry *sym,
-                          guint        *n_settings)
+                          gint         *n_settings)
 {
   GParamSpec **pspecs;
 
@@ -480,7 +480,7 @@ gimp_mirror_get_settings (GimpSymmetry *sym,
 
 static GParamSpec **
 gimp_mirror_get_xcf_settings (GimpSymmetry *sym,
-                              guint        *n_settings)
+                              gint         *n_settings)
 {
   GParamSpec **pspecs;
 
