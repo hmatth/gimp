@@ -520,21 +520,19 @@ gimp_mirror_set_horizontal_symmetry (GimpMirror *mirror,
 
   mirror->horizontal_mirror = active;
 
-  if (active)
+  if (active && ! mirror->horizontal_guide)
     {
-      if (! mirror->horizontal_guide)
-        {
-          /* Create a new mirror guide. */
-          Gimp            *gimp  = GIMP (image->gimp);
-          GimpMirrorGuide *guide;
+      /* Create a new mirror guide. */
+      Gimp            *gimp  = GIMP (image->gimp);
+      GimpMirrorGuide *guide;
 
-          /* Mirror guide position at first activation is at canvas middle. */
-          mirror->horizontal_position = (gdouble) gimp_image_get_height (image) / 2.0;
-          guide = gimp_mirror_guide_new (gimp,
-                                         GIMP_ORIENTATION_HORIZONTAL,
-                                         gimp->next_guide_ID++);
-          mirror->horizontal_guide = guide;
-        } /* Else reuse existing guide at same position. */
+      /* Mirror guide position at first activation is at canvas middle. */
+      if (mirror->horizontal_position < 1.0)
+      mirror->horizontal_position = (gdouble) gimp_image_get_height (image) / 2.0;
+      guide = gimp_mirror_guide_new (gimp,
+                                     GIMP_ORIENTATION_HORIZONTAL,
+                                     gimp->next_guide_ID++);
+      mirror->horizontal_guide = guide;
 
       g_signal_connect (G_OBJECT (mirror->horizontal_guide), "removed",
                         G_CALLBACK (gimp_mirror_guide_removed_cb),
@@ -545,10 +543,8 @@ gimp_mirror_set_horizontal_symmetry (GimpMirror *mirror,
                         G_CALLBACK (gimp_mirror_guide_position_cb),
                         mirror);
     }
-  else if (! mirror->point_symmetry)
+  else if (! active && ! mirror->point_symmetry)
     {
-      /* We remove the guide but keep the reference,
-       * so that when we reshow it, we can just reuse the same guide. */
       g_signal_handlers_disconnect_by_func (G_OBJECT (mirror->horizontal_guide),
                                             gimp_mirror_guide_removed_cb,
                                             mirror);
@@ -557,6 +553,8 @@ gimp_mirror_set_horizontal_symmetry (GimpMirror *mirror,
                                             mirror);
       gimp_image_remove_guide (image, GIMP_GUIDE (mirror->horizontal_guide),
                                FALSE);
+      g_object_unref (mirror->horizontal_guide);
+      mirror->horizontal_guide = NULL;
     }
 
   gimp_mirror_reset (mirror);
@@ -588,26 +586,25 @@ gimp_mirror_set_vertical_symmetry (GimpMirror *mirror,
           GimpMirrorGuide *guide;
 
           /* Mirror guide position at first activation is at canvas middle. */
-          mirror->vertical_position = (gdouble) gimp_image_get_width (image) / 2.0;
+          if (mirror->vertical_position < 1.0)
+            mirror->vertical_position = (gdouble) gimp_image_get_width (image) / 2.0;
           guide = gimp_mirror_guide_new (gimp,
                                          GIMP_ORIENTATION_VERTICAL,
                                          gimp->next_guide_ID++);
           mirror->vertical_guide = guide;
-        } /* Else reuse existing guide at same position. */
 
-      g_signal_connect (G_OBJECT (mirror->vertical_guide), "removed",
-                        G_CALLBACK (gimp_mirror_guide_removed_cb),
-                        mirror);
-      gimp_image_add_guide (image, GIMP_GUIDE (mirror->vertical_guide),
-                            (gint) mirror->vertical_position);
-      g_signal_connect (G_OBJECT (mirror->vertical_guide), "notify::position",
-                        G_CALLBACK (gimp_mirror_guide_position_cb),
-                        mirror);
+          g_signal_connect (G_OBJECT (mirror->vertical_guide), "removed",
+                            G_CALLBACK (gimp_mirror_guide_removed_cb),
+                            mirror);
+          gimp_image_add_guide (image, GIMP_GUIDE (mirror->vertical_guide),
+                                (gint) mirror->vertical_position);
+          g_signal_connect (G_OBJECT (mirror->vertical_guide), "notify::position",
+                            G_CALLBACK (gimp_mirror_guide_position_cb),
+                            mirror);
+        }
     }
   else if (! mirror->point_symmetry)
     {
-      /* We remove the guide but keep the reference,
-       * so that when we reshow it, we can just reuse the same guide. */
       g_signal_handlers_disconnect_by_func (G_OBJECT (mirror->vertical_guide),
                                             gimp_mirror_guide_removed_cb,
                                             mirror);
@@ -616,6 +613,8 @@ gimp_mirror_set_vertical_symmetry (GimpMirror *mirror,
                                             mirror);
       gimp_image_remove_guide (image, GIMP_GUIDE (mirror->vertical_guide),
                                FALSE);
+      g_object_unref (mirror->vertical_guide);
+      mirror->vertical_guide = NULL;
     }
 
   gimp_mirror_reset (mirror);
@@ -650,22 +649,23 @@ gimp_mirror_set_point_symmetry (GimpMirror *mirror,
               GimpMirrorGuide *guide;
 
               /* Mirror guide position at first activation is at canvas middle. */
-              mirror->horizontal_position = (gdouble) gimp_image_get_height (image) / 2.0;
+              if (mirror->horizontal_position < 1.0)
+                mirror->horizontal_position = (gdouble) gimp_image_get_height (image) / 2.0;
               guide = gimp_mirror_guide_new (gimp,
                                              GIMP_ORIENTATION_HORIZONTAL,
                                              gimp->next_guide_ID++);
               mirror->horizontal_guide = guide;
 
-            } /* Else reuse existing guide at same position. */
 
-          g_signal_connect (G_OBJECT (mirror->horizontal_guide), "removed",
-                            G_CALLBACK (gimp_mirror_guide_removed_cb),
-                            mirror);
-          gimp_image_add_guide (image, GIMP_GUIDE (mirror->horizontal_guide),
-                                (gint) mirror->horizontal_position);
-          g_signal_connect (G_OBJECT (mirror->horizontal_guide), "notify::position",
-                            G_CALLBACK (gimp_mirror_guide_position_cb),
-                            mirror);
+              g_signal_connect (G_OBJECT (mirror->horizontal_guide), "removed",
+                                G_CALLBACK (gimp_mirror_guide_removed_cb),
+                                mirror);
+              gimp_image_add_guide (image, GIMP_GUIDE (mirror->horizontal_guide),
+                                    (gint) mirror->horizontal_position);
+              g_signal_connect (G_OBJECT (mirror->horizontal_guide), "notify::position",
+                                G_CALLBACK (gimp_mirror_guide_position_cb),
+                                mirror);
+            }
         }
 
       /* Show the vertical guide unless already shown */
@@ -678,22 +678,22 @@ gimp_mirror_set_point_symmetry (GimpMirror *mirror,
               GimpMirrorGuide *guide;
 
               /* Mirror guide position at first activation is at canvas middle. */
-              mirror->vertical_position = (gdouble) gimp_image_get_width (image) / 2.0;
+              if (mirror->vertical_position < 1.0)
+                mirror->vertical_position = (gdouble) gimp_image_get_width (image) / 2.0;
               guide = gimp_mirror_guide_new (gimp,
                                              GIMP_ORIENTATION_VERTICAL,
                                              gimp->next_guide_ID++);
               mirror->vertical_guide = guide;
 
-            } /* Else reuse existing guide at same position. */
-
-          g_signal_connect (G_OBJECT (mirror->vertical_guide), "removed",
-                            G_CALLBACK (gimp_mirror_guide_removed_cb),
-                            mirror);
-          gimp_image_add_guide (image, GIMP_GUIDE (mirror->vertical_guide),
-                                (gint) mirror->vertical_position);
-          g_signal_connect (G_OBJECT (mirror->vertical_guide), "notify::position",
-                            G_CALLBACK (gimp_mirror_guide_position_cb),
-                            mirror);
+              g_signal_connect (G_OBJECT (mirror->vertical_guide), "removed",
+                                G_CALLBACK (gimp_mirror_guide_removed_cb),
+                                mirror);
+              gimp_image_add_guide (image, GIMP_GUIDE (mirror->vertical_guide),
+                                    (gint) mirror->vertical_position);
+              g_signal_connect (G_OBJECT (mirror->vertical_guide), "notify::position",
+                                G_CALLBACK (gimp_mirror_guide_position_cb),
+                                mirror);
+            }
         }
     }
   else
@@ -709,6 +709,8 @@ gimp_mirror_set_point_symmetry (GimpMirror *mirror,
                                                 mirror);
           gimp_image_remove_guide (image, GIMP_GUIDE (mirror->horizontal_guide),
                                    FALSE);
+          g_object_unref (mirror->horizontal_guide);
+          mirror->horizontal_guide = NULL;
         }
       /* Hide the vertical guide unless needed by vertical mirror */
       if (! mirror->vertical_mirror)
@@ -721,6 +723,8 @@ gimp_mirror_set_point_symmetry (GimpMirror *mirror,
                                                 mirror);
           gimp_image_remove_guide (image, GIMP_GUIDE (mirror->vertical_guide),
                                    FALSE);
+          g_object_unref (mirror->vertical_guide);
+          mirror->vertical_guide = NULL;
         }
     }
 
