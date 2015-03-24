@@ -38,7 +38,9 @@ enum
   PROP_0,
   PROP_ORIENTATION,
   PROP_POSITION,
-  PROP_GUIDE_STYLE
+  PROP_NORMAL_STYLE,
+  PROP_ACTIVE_STYLE,
+  PROP_LINE_WIDTH
 };
 
 
@@ -46,9 +48,12 @@ typedef struct _GimpCanvasGuidePrivate GimpCanvasGuidePrivate;
 
 struct _GimpCanvasGuidePrivate
 {
-  GimpOrientationType orientation;
-  gint                position;
-  GimpGuideStyle      guide_style;
+  GimpOrientationType  orientation;
+  gint                 position;
+
+  cairo_pattern_t     *active_style;
+  cairo_pattern_t     *normal_style;
+  gdouble              line_width;
 };
 
 #define GET_PRIVATE(guide) \
@@ -104,11 +109,20 @@ gimp_canvas_guide_class_init (GimpCanvasGuideClass *klass)
                                                      GIMP_MAX_IMAGE_SIZE, 0,
                                                      GIMP_PARAM_READWRITE));
 
-  g_object_class_install_property (object_class, PROP_GUIDE_STYLE,
-                                   g_param_spec_enum ("guide-style", NULL, NULL,
-                                                      GIMP_TYPE_GUIDE_STYLE,
-                                                      GIMP_GUIDE_STYLE_NONE,
-                                                      GIMP_PARAM_READWRITE));
+  g_object_class_install_property (object_class, PROP_NORMAL_STYLE,
+                                   g_param_spec_pointer ("normal-style", NULL, NULL,
+                                                         GIMP_PARAM_READWRITE |
+                                                         G_PARAM_CONSTRUCT_ONLY));
+  g_object_class_install_property (object_class, PROP_ACTIVE_STYLE,
+                                   g_param_spec_pointer ("active-style", NULL, NULL,
+                                                         GIMP_PARAM_READWRITE |
+                                                         G_PARAM_CONSTRUCT_ONLY));
+  g_object_class_install_property (object_class, PROP_LINE_WIDTH,
+                                   g_param_spec_double ("line-width", NULL, NULL,
+                                                        0, GIMP_MAX_IMAGE_SIZE,
+                                                        1.0,
+                                                        GIMP_PARAM_READWRITE |
+                                                        G_PARAM_CONSTRUCT_ONLY));
 
   g_type_class_add_private (klass, sizeof (GimpCanvasGuidePrivate));
 }
@@ -134,8 +148,14 @@ gimp_canvas_guide_set_property (GObject      *object,
     case PROP_POSITION:
       private->position = g_value_get_int (value);
       break;
-    case PROP_GUIDE_STYLE:
-      private->guide_style = g_value_get_enum (value);
+    case PROP_NORMAL_STYLE:
+      private->normal_style = g_value_get_pointer (value);
+      break;
+    case PROP_ACTIVE_STYLE:
+      private->active_style = g_value_get_pointer (value);
+      break;
+    case PROP_LINE_WIDTH:
+      private->line_width = g_value_get_double (value);
       break;
 
     default:
@@ -160,8 +180,14 @@ gimp_canvas_guide_get_property (GObject    *object,
     case PROP_POSITION:
       g_value_set_int (value, private->position);
       break;
-    case PROP_GUIDE_STYLE:
-      g_value_set_enum (value, private->guide_style);
+    case PROP_NORMAL_STYLE:
+      g_value_set_pointer (value, private->normal_style);
+      break;
+    case PROP_ACTIVE_STYLE:
+      g_value_set_pointer (value, private->active_style);
+      break;
+    case PROP_LINE_WIDTH:
+      g_value_set_double (value, private->line_width);
       break;
 
     default:
@@ -247,11 +273,18 @@ gimp_canvas_guide_stroke (GimpCanvasItem *item,
 {
   GimpCanvasGuidePrivate *private = GET_PRIVATE (item);
 
-  if (private->guide_style != GIMP_GUIDE_STYLE_NONE)
+  if (private->active_style &&
+      gimp_canvas_item_get_highlight (item))
     {
-      gimp_canvas_set_guide_style (gimp_canvas_item_get_canvas (item), cr,
-                                   private->guide_style,
-                                   gimp_canvas_item_get_highlight (item));
+      cairo_set_line_width (cr, private->line_width);
+      cairo_set_source (cr, private->active_style);
+      cairo_stroke (cr);
+    }
+  else if (private->normal_style &&
+           ! gimp_canvas_item_get_highlight (item))
+    {
+      cairo_set_line_width (cr, private->line_width);
+      cairo_set_source (cr, private->normal_style);
       cairo_stroke (cr);
     }
   else
@@ -264,15 +297,19 @@ GimpCanvasItem *
 gimp_canvas_guide_new (GimpDisplayShell    *shell,
                        GimpOrientationType  orientation,
                        gint                 position,
-                       GimpGuideStyle       guide_style)
+                       cairo_pattern_t     *normal_style,
+                       cairo_pattern_t     *active_style,
+                       gdouble              line_width)
 {
   g_return_val_if_fail (GIMP_IS_DISPLAY_SHELL (shell), NULL);
 
   return g_object_new (GIMP_TYPE_CANVAS_GUIDE,
-                       "shell",       shell,
-                       "orientation", orientation,
-                       "position",    position,
-                       "guide-style", guide_style,
+                       "shell",        shell,
+                       "orientation",  orientation,
+                       "position",     position,
+                       "normal-style", normal_style,
+                       "active-style", active_style,
+                       "line-width",   line_width,
                        NULL);
 }
 

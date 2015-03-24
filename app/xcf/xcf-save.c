@@ -48,7 +48,6 @@
 #include "core/gimpimage-symmetry.h"
 #include "core/gimplayer.h"
 #include "core/gimplayermask.h"
-#include "core/gimpmirrorguide.h"
 #include "core/gimpparasitelist.h"
 #include "core/gimpprogress.h"
 #include "core/gimpsamplepoint.h"
@@ -865,8 +864,8 @@ xcf_save_prop (XcfInfo    *info,
 
         for (iter = guides; iter; iter = g_list_next (iter))
           {
-            /* Do not write down mirror guides here. */
-            if (GIMP_IS_MIRROR_GUIDE (iter->data))
+            /* Do not save custom guides. */
+            if (gimp_guide_is_custom (GIMP_GUIDE (iter->data)))
               n_guides--;
           }
         size = n_guides * (4 + 1);
@@ -880,7 +879,7 @@ xcf_save_prop (XcfInfo    *info,
             gint32     position = gimp_guide_get_position (guide);
             gint8      orientation;
 
-            if (GIMP_IS_MIRROR_GUIDE (guide))
+            if (gimp_guide_is_custom (guide))
               continue;
 
             switch (gimp_guide_get_orientation (guide))

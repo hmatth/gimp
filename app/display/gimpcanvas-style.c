@@ -35,16 +35,6 @@
 #include "gimpcanvas-style.h"
 
 
-static const GimpRGB guide_normal_fg     = { 0.0, 0.0, 0.0, 1.0 };
-static const GimpRGB guide_normal_bg     = { 0.0, 0.5, 1.0, 1.0 };
-static const GimpRGB guide_active_fg     = { 0.0, 0.0, 0.0, 1.0 };
-static const GimpRGB guide_active_bg     = { 1.0, 0.0, 0.0, 1.0 };
-
-static const GimpRGB mirror_guide_normal_fg = { 1.0, 1.0, 1.0, 1.0 };
-static const GimpRGB mirror_guide_normal_bg = { 0.0, 1.0, 0.0, 1.0 };
-static const GimpRGB mirror_guide_active_fg = { 0.0, 1.0, 0.0, 1.0 };
-static const GimpRGB mirror_guide_active_bg = { 1.0, 0.0, 0.0, 1.0 };
-
 static const GimpRGB sample_point_normal = { 0.0, 0.5, 1.0, 1.0 };
 static const GimpRGB sample_point_active = { 1.0, 0.0, 0.0, 1.0 };
 
@@ -80,53 +70,6 @@ static const GimpRGB tool_fg_highlight   = { 1.0, 0.8, 0.2, 0.8 };
 
 
 /*  public functions  */
-
-void
-gimp_canvas_set_guide_style (GtkWidget      *canvas,
-                             cairo_t        *cr,
-                             GimpGuideStyle  style,
-                             gboolean        active)
-{
-  cairo_pattern_t *pattern;
-  const GimpRGB *fg;
-  const GimpRGB *bg;
-
-  g_return_if_fail (GTK_IS_WIDGET (canvas));
-  g_return_if_fail (cr != NULL);
-
-  cairo_set_line_width (cr, 1.0);
-
-  if (active)
-    {
-      if (style == GIMP_GUIDE_STYLE_MIRROR)
-        {
-          fg = &mirror_guide_active_fg;
-          bg = &mirror_guide_active_bg;
-        }
-      else /* style == GIMP_GUIDE_STYLE_NORMAL */
-        {
-          fg = &guide_active_fg;
-          bg = &guide_active_bg;
-        }
-    }
-  else
-    {
-      if (style == GIMP_GUIDE_STYLE_MIRROR)
-        {
-          fg = &mirror_guide_normal_fg;
-          bg = &mirror_guide_normal_bg;
-        }
-      else /* style == GIMP_GUIDE_STYLE_NORMAL */
-        {
-          fg = &guide_normal_fg;
-          bg = &guide_normal_bg;
-        }
-    }
-  pattern = gimp_cairo_stipple_pattern_create (fg, bg, 0);
-
-  cairo_set_source (cr, pattern);
-  cairo_pattern_destroy (pattern);
-}
 
 void
 gimp_canvas_set_sample_point_style (GtkWidget *canvas,

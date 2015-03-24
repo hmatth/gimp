@@ -59,6 +59,11 @@ GType               gimp_guide_get_type        (void) G_GNUC_CONST;
 
 GimpGuide *         gimp_guide_new             (GimpOrientationType  orientation,
                                                 guint32              guide_ID);
+GimpGuide *         gimp_guide_custom_new      (GimpOrientationType  orientation,
+                                                guint32              guide_ID,
+                                                cairo_pattern_t     *normal_style,
+                                                cairo_pattern_t     *active_style,
+                                                gdouble              line_width);
 
 guint32             gimp_guide_get_ID          (GimpGuide           *guide);
 
@@ -71,5 +76,9 @@ void                gimp_guide_set_position    (GimpGuide           *guide,
                                                 gint                 position);
 void                gimp_guide_removed         (GimpGuide           *guide);
 
+cairo_pattern_t   * gimp_guide_get_normal_style (GimpGuide           *guide);
+cairo_pattern_t   * gimp_guide_get_active_style (GimpGuide           *guide);
+gdouble             gimp_guide_get_line_width   (GimpGuide           *guide);
+gboolean            gimp_guide_is_custom        (GimpGuide           *guide);
 
 #endif /* __GIMP_GUIDE_H__ */

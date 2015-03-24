@@ -45,8 +45,8 @@ struct _GimpMirror
 
   gdouble          horizontal_position;
   gdouble          vertical_position;
-  GimpMirrorGuide *horizontal_guide;
-  GimpMirrorGuide *vertical_guide;
+  GimpGuide       *horizontal_guide;
+  GimpGuide       *vertical_guide;
 
   /* Cached data */
   gint             last_paint_width;

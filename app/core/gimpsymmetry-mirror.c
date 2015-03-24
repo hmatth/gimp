@@ -22,6 +22,7 @@
 
 #include <string.h>
 
+#include <cairo.h>
 #include <gegl.h>
 #include <gdk-pixbuf/gdk-pixbuf.h>
 
@@ -30,8 +31,9 @@
 #include "core-types.h"
 
 #include "gimp.h"
+#include "gimp-cairo.h"
 #include "gimpbrush.h"
-#include "gimpmirrorguide.h"
+#include "gimpguide.h"
 #include "gimpimage.h"
 #include "gimpimage-guides.h"
 #include "gimpimage-symmetry.h"
@@ -75,6 +77,8 @@ static GeglNode * gimp_mirror_get_operation       (GimpSymmetry *mirror,
                                                    gint          paint_width,
                                                    gint          paint_height);
 static void       gimp_mirror_reset               (GimpMirror   *mirror);
+static GimpGuide * gimp_mirror_create_guide       (GimpImage    *image,
+                                                   GimpOrientationType orientation);
 static void       gimp_mirror_guide_removed_cb    (GObject      *object,
                                                    GimpMirror   *mirror);
 static void       gimp_mirror_guide_position_cb   (GObject      *object,
@@ -207,13 +211,13 @@ gimp_mirror_set_property (GObject      *object,
     case PROP_HORIZONTAL_POSITION:
       mirror->horizontal_position = g_value_get_double (value);
       if (mirror->horizontal_guide)
-        gimp_guide_set_position (GIMP_GUIDE (mirror->horizontal_guide),
+        gimp_guide_set_position (mirror->horizontal_guide,
                                  mirror->horizontal_position);
       break;
     case PROP_VERTICAL_POSITION:
       mirror->vertical_position = g_value_get_double (value);
       if (mirror->vertical_guide)
-        gimp_guide_set_position (GIMP_GUIDE (mirror->vertical_guide),
+        gimp_guide_set_position (mirror->vertical_guide,
                                  mirror->vertical_position);
       break;
     default:
@@ -392,6 +396,32 @@ gimp_mirror_reset (GimpMirror *mirror)
     }
 }
 
+static GimpGuide *
+gimp_mirror_create_guide (GimpImage           *image,
+                          GimpOrientationType  orientation)
+{
+  static const GimpRGB  normal_fg = { 1.0, 1.0, 1.0, 1.0 };
+  static const GimpRGB  normal_bg = { 0.0, 1.0, 0.0, 1.0 };
+  static const GimpRGB  active_fg = { 0.0, 1.0, 0.0, 1.0 };
+  static const GimpRGB  active_bg = { 1.0, 0.0, 0.0, 1.0 };
+  Gimp                 *gimp  = GIMP (image->gimp);
+  GimpGuide            *guide;
+  cairo_pattern_t      *normal_style;
+  cairo_pattern_t      *active_style;
+
+  normal_style = gimp_cairo_stipple_pattern_create (&normal_fg,
+                                                    &normal_bg,
+                                                    0);
+  active_style = gimp_cairo_stipple_pattern_create (&active_fg,
+                                                    &active_bg,
+                                                    0);
+
+  guide = gimp_guide_custom_new (orientation,
+                                 gimp->next_guide_ID++,
+                                 normal_style, active_style, 1.0);
+  return guide;
+}
+
 static void
 gimp_mirror_guide_removed_cb (GObject    *object,
                               GimpMirror *mirror)
@@ -402,7 +432,7 @@ gimp_mirror_guide_removed_cb (GObject    *object,
   g_signal_handlers_disconnect_by_func (object,
                                         gimp_mirror_guide_position_cb,
                                         mirror);
-  if (GIMP_MIRROR_GUIDE (object) == mirror->horizontal_guide)
+  if (GIMP_GUIDE (object) == mirror->horizontal_guide)
     {
       g_object_unref (mirror->horizontal_guide);
 
@@ -412,7 +442,7 @@ gimp_mirror_guide_removed_cb (GObject    *object,
       mirror->point_symmetry      = FALSE;
       mirror->horizontal_position = 0.0;
     }
-  else if (GIMP_MIRROR_GUIDE (object) == mirror->vertical_guide)
+  else if (GIMP_GUIDE (object) == mirror->vertical_guide)
     {
       g_object_unref (mirror->vertical_guide);
       mirror->vertical_guide    = NULL;
@@ -446,11 +476,11 @@ gimp_mirror_guide_position_cb (GObject    *object,
 
   guide = GIMP_GUIDE (object);
 
-  if (GIMP_MIRROR_GUIDE (guide) == mirror->horizontal_guide)
+  if (guide == mirror->horizontal_guide)
     {
       mirror->horizontal_position = (gdouble) gimp_guide_get_position (guide);
     }
-  else if (GIMP_MIRROR_GUIDE (guide) == mirror->vertical_guide)
+  else if (guide == mirror->vertical_guide)
     {
       mirror->vertical_position = (gdouble) gimp_guide_get_position (guide);
     }
@@ -523,22 +553,22 @@ gimp_mirror_set_horizontal_symmetry (GimpMirror *mirror,
   if (active && ! mirror->horizontal_guide)
     {
       /* Create a new mirror guide. */
-      Gimp            *gimp  = GIMP (image->gimp);
-      GimpMirrorGuide *guide;
+      GimpGuide *guide;
 
-      /* Mirror guide position at first activation is at canvas middle. */
-      if (mirror->horizontal_position < 1.0)
-      mirror->horizontal_position = (gdouble) gimp_image_get_height (image) / 2.0;
-      guide = gimp_mirror_guide_new (gimp,
-                                     GIMP_ORIENTATION_HORIZONTAL,
-                                     gimp->next_guide_ID++);
+      guide = gimp_mirror_create_guide (image,
+                                        GIMP_ORIENTATION_HORIZONTAL);
       mirror->horizontal_guide = guide;
 
       g_signal_connect (G_OBJECT (mirror->horizontal_guide), "removed",
                         G_CALLBACK (gimp_mirror_guide_removed_cb),
                         mirror);
-      gimp_image_add_guide (image, GIMP_GUIDE (mirror->horizontal_guide),
+
+      /* Mirror guide position at first activation is at canvas middle. */
+      if (mirror->horizontal_position < 1.0)
+        mirror->horizontal_position = (gdouble) gimp_image_get_height (image) / 2.0;
+      gimp_image_add_guide (image, mirror->horizontal_guide,
                             (gint) mirror->horizontal_position);
+
       g_signal_connect (G_OBJECT (mirror->horizontal_guide), "notify::position",
                         G_CALLBACK (gimp_mirror_guide_position_cb),
                         mirror);
@@ -582,22 +612,23 @@ gimp_mirror_set_vertical_symmetry (GimpMirror *mirror,
       if (! mirror->vertical_guide)
         {
           /* Create a new mirror guide. */
-          Gimp            *gimp  = GIMP (image->gimp);
-          GimpMirrorGuide *guide;
+          GimpGuide *guide;
 
-          /* Mirror guide position at first activation is at canvas middle. */
-          if (mirror->vertical_position < 1.0)
-            mirror->vertical_position = (gdouble) gimp_image_get_width (image) / 2.0;
-          guide = gimp_mirror_guide_new (gimp,
-                                         GIMP_ORIENTATION_VERTICAL,
-                                         gimp->next_guide_ID++);
+          guide = gimp_mirror_create_guide (image,
+                                            GIMP_ORIENTATION_VERTICAL);
+
           mirror->vertical_guide = guide;
 
           g_signal_connect (G_OBJECT (mirror->vertical_guide), "removed",
                             G_CALLBACK (gimp_mirror_guide_removed_cb),
                             mirror);
-          gimp_image_add_guide (image, GIMP_GUIDE (mirror->vertical_guide),
+
+          /* Mirror guide position at first activation is at canvas middle. */
+          if (mirror->vertical_position < 1.0)
+            mirror->vertical_position = (gdouble) gimp_image_get_width (image) / 2.0;
+          gimp_image_add_guide (image, mirror->vertical_guide,
                                 (gint) mirror->vertical_position);
+
           g_signal_connect (G_OBJECT (mirror->vertical_guide), "notify::position",
                             G_CALLBACK (gimp_mirror_guide_position_cb),
                             mirror);
@@ -645,23 +676,22 @@ gimp_mirror_set_point_symmetry (GimpMirror *mirror,
           if (! mirror->horizontal_guide)
             {
               /* Create a new mirror guide. */
-              Gimp            *gimp  = GIMP (image->gimp);
-              GimpMirrorGuide *guide;
+              GimpGuide *guide;
 
-              /* Mirror guide position at first activation is at canvas middle. */
-              if (mirror->horizontal_position < 1.0)
-                mirror->horizontal_position = (gdouble) gimp_image_get_height (image) / 2.0;
-              guide = gimp_mirror_guide_new (gimp,
-                                             GIMP_ORIENTATION_HORIZONTAL,
-                                             gimp->next_guide_ID++);
+              guide = gimp_mirror_create_guide (image,
+                                                GIMP_ORIENTATION_HORIZONTAL);
               mirror->horizontal_guide = guide;
-
 
               g_signal_connect (G_OBJECT (mirror->horizontal_guide), "removed",
                                 G_CALLBACK (gimp_mirror_guide_removed_cb),
                                 mirror);
-              gimp_image_add_guide (image, GIMP_GUIDE (mirror->horizontal_guide),
+
+              /* Mirror guide position at first activation is at canvas middle. */
+              if (mirror->horizontal_position < 1.0)
+                mirror->horizontal_position = (gdouble) gimp_image_get_height (image) / 2.0;
+              gimp_image_add_guide (image, mirror->horizontal_guide,
                                     (gint) mirror->horizontal_position);
+
               g_signal_connect (G_OBJECT (mirror->horizontal_guide), "notify::position",
                                 G_CALLBACK (gimp_mirror_guide_position_cb),
                                 mirror);
@@ -674,22 +704,22 @@ gimp_mirror_set_point_symmetry (GimpMirror *mirror,
           if (! mirror->vertical_guide)
             {
               /* Create a new mirror guide. */
-              Gimp            *gimp  = GIMP (image->gimp);
-              GimpMirrorGuide *guide;
+              GimpGuide *guide;
 
-              /* Mirror guide position at first activation is at canvas middle. */
-              if (mirror->vertical_position < 1.0)
-                mirror->vertical_position = (gdouble) gimp_image_get_width (image) / 2.0;
-              guide = gimp_mirror_guide_new (gimp,
-                                             GIMP_ORIENTATION_VERTICAL,
-                                             gimp->next_guide_ID++);
+              guide = gimp_mirror_create_guide (image,
+                                                GIMP_ORIENTATION_VERTICAL);
               mirror->vertical_guide = guide;
 
               g_signal_connect (G_OBJECT (mirror->vertical_guide), "removed",
                                 G_CALLBACK (gimp_mirror_guide_removed_cb),
                                 mirror);
-              gimp_image_add_guide (image, GIMP_GUIDE (mirror->vertical_guide),
+
+              /* Mirror guide position at first activation is at canvas middle. */
+              if (mirror->vertical_position < 1.0)
+                mirror->vertical_position = (gdouble) gimp_image_get_width (image) / 2.0;
+              gimp_image_add_guide (image, mirror->vertical_guide,
                                     (gint) mirror->vertical_position);
+
               g_signal_connect (G_OBJECT (mirror->vertical_guide), "notify::position",
                                 G_CALLBACK (gimp_mirror_guide_position_cb),
                                 mirror);
