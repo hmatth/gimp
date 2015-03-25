@@ -269,7 +269,7 @@ gimp_paint_options_gui (GimpToolOptions *tool_options)
           for (syms = gimp_image_symmetry_list (); syms; syms = g_list_next (syms))
             {
               GimpSymmetryClass *klass;
-              GType                 type;
+              GType              type;
 
               type = (GType) syms->data;
               klass = g_type_class_ref (type);

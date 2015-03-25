@@ -424,19 +424,6 @@ xcf_save_image_props (XcfInfo    *info,
           gimp_parasite_list_add (private->parasites, parasite);
           symmetry_parasites = g_list_prepend (symmetry_parasites, parasite);
         }
-      if (gimp_image_symmetry_selected (image))
-        {
-          const gchar *name;
-
-          name = g_type_name (gimp_image_symmetry_selected (image)->type);
-
-          parasite = gimp_parasite_new ("gimp-image-symmetry-selected",
-                                        GIMP_PARASITE_PERSISTENT,
-                                        strlen (name) + 1,
-                                        name);
-          gimp_parasite_list_add (private->parasites, parasite);
-          symmetry_parasites = g_list_prepend (symmetry_parasites, parasite);
-        }
     }
 
   if (gimp_parasite_list_length (private->parasites) > 0)

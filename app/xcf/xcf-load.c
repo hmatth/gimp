@@ -295,18 +295,12 @@ xcf_load_image (Gimp     *gimp,
                                          gimp_parasite_name (parasite));
 
               gimp_image_symmetry_add (image, sym);
+
+              g_signal_emit_by_name (sym, "active-changed", NULL);
+              if (sym->active)
+                gimp_image_symmetry_select (image, type);
             }
         }
-    }
-  parasite = gimp_image_parasite_find (image, "gimp-image-symmetry-selected");
-  if (parasite)
-    {
-      const gchar *str;
-
-      str = gimp_parasite_data (parasite);
-      if (! gimp_image_symmetry_select (image, g_type_from_name (str)))
-        g_warning ("%s: no symmetry of type %s",
-                   G_STRFUNC, str);
     }
 
 

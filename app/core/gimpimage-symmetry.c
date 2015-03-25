@@ -80,7 +80,6 @@ gimp_image_symmetry_add (GimpImage    *image,
 
   private->symmetries = g_list_prepend (private->symmetries,
                                         sym);
-  private->selected_symmetry = sym;
 }
 
 /**
@@ -103,7 +102,7 @@ gimp_image_symmetry_remove (GimpImage    *image,
   private = GIMP_IMAGE_GET_PRIVATE (image);
 
   if (private->selected_symmetry == sym)
-    private->selected_symmetry = NULL;
+    gimp_image_symmetry_select (image, G_TYPE_NONE);
   private->symmetries = g_list_remove (private->symmetries,
                                        sym);
   g_object_unref (sym);
@@ -152,6 +151,10 @@ gimp_image_symmetry_select (GimpImage *image,
 
   if (type == G_TYPE_NONE)
     {
+      if (private->selected_symmetry)
+        g_object_set (private->selected_symmetry,
+                      "active", FALSE,
+                      NULL);
       private->selected_symmetry = NULL;
       return TRUE;
     }
@@ -162,7 +165,14 @@ gimp_image_symmetry_select (GimpImage *image,
           GimpSymmetry *sym = iter->data;
           if (g_type_is_a (sym->type, type))
             {
+              if (private->selected_symmetry)
+                g_object_set (private->selected_symmetry,
+                              "active", FALSE,
+                              NULL);
               private->selected_symmetry = iter->data;
+              g_object_set (private->selected_symmetry,
+                            "active", TRUE,
+                            NULL);
               return TRUE;
             }
         }

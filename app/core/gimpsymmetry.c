@@ -42,6 +42,7 @@ enum
 {
   STROKES_UPDATED,
   UPDATE_UI,
+  ACTIVE_CHANGED,
   LAST_SIGNAL
 };
 
@@ -49,6 +50,7 @@ enum
 {
   PROP_0,
   PROP_IMAGE,
+  PROP_ACTIVE,
 };
 
 /* Local function prototypes */
@@ -113,6 +115,14 @@ gimp_symmetry_class_init (GimpSymmetryClass *klass)
                   G_TYPE_NONE,
                   1, GIMP_TYPE_IMAGE);
 
+  gimp_symmetry_signals[ACTIVE_CHANGED] =
+    g_signal_new ("active-changed",
+                  G_TYPE_FROM_CLASS (klass),
+                  G_SIGNAL_RUN_FIRST,
+                  G_STRUCT_OFFSET (GimpSymmetryClass, active_changed),
+                  NULL, NULL,
+                  NULL,
+                  G_TYPE_NONE, 0);
 
   object_class->finalize     = gimp_symmetry_finalize;
   object_class->set_property = gimp_symmetry_set_property;
@@ -122,6 +132,7 @@ gimp_symmetry_class_init (GimpSymmetryClass *klass)
   klass->update_strokes      = gimp_symmetry_real_update_strokes;
   klass->get_operation       = gimp_symmetry_real_get_op;
   klass->get_settings        = gimp_symmetry_real_get_settings;
+  klass->active_changed      = NULL;
 
   g_object_class_install_property (object_class, PROP_IMAGE,
                                    g_param_spec_object ("image",
@@ -129,6 +140,11 @@ gimp_symmetry_class_init (GimpSymmetryClass *klass)
                                                         GIMP_TYPE_IMAGE,
                                                         GIMP_PARAM_READWRITE |
                                                         G_PARAM_CONSTRUCT_ONLY));
+  GIMP_CONFIG_INSTALL_PROP_BOOLEAN (object_class, PROP_ACTIVE,
+                                    "active",
+                                    _("Activate symmetry painting"),
+                                    FALSE,
+                                    GIMP_PARAM_STATIC_STRINGS);
 }
 
 
@@ -168,6 +184,11 @@ gimp_symmetry_set_property (GObject      *object,
     case PROP_IMAGE:
       sym->image = g_value_get_object (value);
       break;
+    case PROP_ACTIVE:
+      sym->active = g_value_get_boolean (value);
+      g_signal_emit (sym, gimp_symmetry_signals[ACTIVE_CHANGED], 0,
+                     sym->active);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
       break;
@@ -186,6 +207,9 @@ gimp_symmetry_get_property (GObject    *object,
     {
     case PROP_IMAGE:
       g_value_set_object (value, sym->image);
+      break;
+    case PROP_ACTIVE:
+      g_value_set_boolean (value, sym->active);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);

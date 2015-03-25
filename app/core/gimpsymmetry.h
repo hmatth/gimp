@@ -41,6 +41,7 @@ struct _GimpSymmetry
   GimpImage    *image;
   GimpDrawable *drawable;
   GimpCoords   *origin;
+  gboolean      active;
 
   GList        *strokes;
 
@@ -64,6 +65,7 @@ struct _GimpSymmetryClass
   GParamSpec **
              (* get_settings)               (GimpSymmetry *sym,
                                              gint         *n_properties);
+  void       (* active_changed)             (GimpSymmetry *sym);
 };
 
 

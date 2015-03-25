@@ -165,7 +165,7 @@ void    gimp_paint_options_copy_dynamics_props (GimpPaintOptions *src,
 void    gimp_paint_options_copy_gradient_props (GimpPaintOptions *src,
                                                 GimpPaintOptions *dest);
 
-void    gimp_paint_options_set_mstroke_props   (GimpPaintOptions *src,
-                                                GimpPaintOptions *dest);
+void    gimp_paint_options_set_symmetry_props   (GimpPaintOptions *src,
+                                                 GimpPaintOptions *dest);
 
 #endif  /*  __GIMP_PAINT_OPTIONS_H__  */

@@ -594,6 +594,7 @@ gimp_paint_options_set_property (GObject      *object,
               sym = gimp_image_symmetry_new (context->image,
                                              options->symmetry);
               gimp_image_symmetry_add (context->image, sym);
+              gimp_image_symmetry_select (context->image, options->symmetry);
             }
         }
       else
@@ -1155,8 +1156,8 @@ gimp_paint_options_copy_gradient_props (GimpPaintOptions *src,
  * depends on the current context image.
  */
 void
-gimp_paint_options_set_mstroke_props (GimpPaintOptions *src,
-                                      GimpPaintOptions *dest)
+gimp_paint_options_set_symmetry_props (GimpPaintOptions *src,
+                                       GimpPaintOptions *dest)
 {
   GimpContext *context;
   GimpImage   *image;
@@ -1169,13 +1170,13 @@ gimp_paint_options_set_mstroke_props (GimpPaintOptions *src,
 
   if (image)
     {
-      GimpSymmetry  *mstroke;
+      GimpSymmetry  *sym;
 
-      mstroke = gimp_image_symmetry_selected (image);
+      sym = gimp_image_symmetry_selected (image);
 
       g_object_set (dest,
                     "symmetry",
-                    mstroke ? mstroke->type : G_TYPE_NONE,
+                    sym ? sym->type : G_TYPE_NONE,
                     NULL);
     }
 }
