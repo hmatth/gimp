@@ -697,6 +697,9 @@ gimp_paint_options_symmetry_ui (GimpSymmetry *sym,
   if (! sym)
     return;
 
+  if (sym->type == GIMP_TYPE_SYMMETRY)
+    return;
+
   klass = g_type_class_ref (sym->type);
   gtk_frame_set_label (GTK_FRAME (frame),
                        klass->label);
