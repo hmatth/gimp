@@ -49,7 +49,8 @@ enum
 
   PROP_CENTER_X,
   PROP_CENTER_Y,
-  PROP_SIZE
+  PROP_SIZE,
+  PROP_DISABLE_TRANSFORMATION,
 };
 
 /* Local function prototypes */
@@ -126,6 +127,11 @@ gimp_mandala_class_init (GimpMandalaClass *klass)
                                 "size", _("Number of points"),
                                 1, 100, 6.0,
                                 GIMP_PARAM_STATIC_STRINGS);
+  GIMP_CONFIG_INSTALL_PROP_BOOLEAN (object_class, PROP_DISABLE_TRANSFORMATION,
+                                    "disable-transformation",
+                                    _("Disable Brush Transformation (faster)"),
+                                    FALSE,
+                                    GIMP_PARAM_STATIC_STRINGS);
 }
 
 static void
@@ -211,6 +217,9 @@ gimp_mandala_set_property (GObject      *object,
     case PROP_SIZE:
       mandala->size = g_value_get_int (value);
       break;
+    case PROP_DISABLE_TRANSFORMATION:
+      mandala->disable_transformation = g_value_get_boolean (value);
+      break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
       break;
@@ -235,6 +244,9 @@ gimp_mandala_get_property (GObject    *object,
       break;
     case PROP_SIZE:
       g_value_set_int (value, mandala->size);
+      break;
+    case PROP_DISABLE_TRANSFORMATION:
+      g_value_set_boolean (value, mandala->disable_transformation);
       break;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
@@ -470,6 +482,10 @@ gimp_mandala_get_operation (GimpSymmetry *sym,
   g_return_val_if_fail (GIMP_IS_MANDALA (sym), NULL);
   g_return_val_if_fail (stroke < mandala->size, NULL);
 
+  if (mandala->disable_transformation || stroke == 0 ||
+      paint_width == 0 || paint_height == 0)
+    op = NULL;
+
   if (mandala->size != mandala->cached_size)
     {
       GList *iter;
@@ -512,11 +528,14 @@ gimp_mandala_get_settings (GimpSymmetry *sym,
 {
   GParamSpec **pspecs;
 
-  *n_settings = 1;
-  pspecs = g_new (GParamSpec*, 1);
+  *n_settings = 3;
+  pspecs = g_new (GParamSpec*, 3);
 
   pspecs[0] = g_object_class_find_property (G_OBJECT_GET_CLASS (sym),
                                             "size");
+  pspecs[1] = NULL;
+  pspecs[2] = g_object_class_find_property (G_OBJECT_GET_CLASS (sym),
+                                            "disable-transformation");
 
   return pspecs;
 }
