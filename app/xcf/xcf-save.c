@@ -339,10 +339,12 @@ xcf_save_image_props (XcfInfo    *info,
                       GimpImage  *image,
                       GError    **error)
 {
-  GimpImagePrivate *private       = GIMP_IMAGE_GET_PRIVATE (image);
-  GimpParasite     *grid_parasite = NULL;
-  GimpParasite     *meta_parasite = NULL;
-  GimpUnit          unit          = gimp_image_get_unit (image);
+  GimpImagePrivate *private            = GIMP_IMAGE_GET_PRIVATE (image);
+  GimpParasite     *grid_parasite      = NULL;
+  GimpParasite     *meta_parasite      = NULL;
+  GList            *symmetry_parasites = NULL;
+  GList            *iter;
+  GimpUnit          unit               = gimp_image_get_unit (image);
   gdouble           xres;
   gdouble           yres;
 
@@ -361,10 +363,6 @@ xcf_save_image_props (XcfInfo    *info,
   if (gimp_image_get_guides (image))
     xcf_check_error (xcf_save_prop (info, image, PROP_GUIDES, error,
                                     gimp_image_get_guides (image)));
-
-  if (g_list_length (gimp_image_symmetry_get (image)))
-    xcf_check_error (xcf_save_prop (info, image, PROP_SYMMETRY, error,
-                                    gimp_image_symmetry_get (image)));
 
   if (gimp_image_get_sample_points (image))
     xcf_check_error (xcf_save_prop (info, image, PROP_SAMPLE_POINTS, error,
@@ -416,6 +414,31 @@ xcf_save_image_props (XcfInfo    *info,
         }
     }
 
+  if (g_list_length (gimp_image_symmetry_get (image)))
+    {
+      GimpParasite *parasite  = NULL;
+
+      for (iter = gimp_image_symmetry_get (image); iter; iter = g_list_next (iter))
+        {
+          parasite = gimp_symmetry_to_parasite (GIMP_SYMMETRY (iter->data));
+          gimp_parasite_list_add (private->parasites, parasite);
+          symmetry_parasites = g_list_prepend (symmetry_parasites, parasite);
+        }
+      if (gimp_image_symmetry_selected (image))
+        {
+          const gchar *name;
+
+          name = g_type_name (gimp_image_symmetry_selected (image)->type);
+
+          parasite = gimp_parasite_new ("gimp-image-symmetry-selected",
+                                        GIMP_PARASITE_PERSISTENT,
+                                        strlen (name) + 1,
+                                        name);
+          gimp_parasite_list_add (private->parasites, parasite);
+          symmetry_parasites = g_list_prepend (symmetry_parasites, parasite);
+        }
+    }
+
   if (gimp_parasite_list_length (private->parasites) > 0)
     {
       xcf_check_error (xcf_save_prop (info, image, PROP_PARASITES, error,
@@ -435,6 +458,16 @@ xcf_save_image_props (XcfInfo    *info,
                                  gimp_parasite_name (meta_parasite));
       gimp_parasite_free (meta_parasite);
     }
+
+  for (iter = symmetry_parasites; iter; iter = g_list_next (iter))
+    {
+      GimpParasite *parasite = iter->data;
+
+      gimp_parasite_list_remove (private->parasites,
+                                 gimp_parasite_name (parasite));
+    }
+  g_list_free_full (symmetry_parasites,
+                    (GDestroyNotify) gimp_parasite_free);
 
   xcf_check_error (xcf_save_prop (info, image, PROP_END, error));
 
@@ -901,164 +934,6 @@ xcf_save_prop (XcfInfo    *info,
             xcf_write_int32_check_error (info, (guint32 *) &position,    1);
             xcf_write_int8_check_error  (info, (guint8 *)  &orientation, 1);
           }
-      }
-      break;
-
-    case PROP_SYMMETRY:
-      {
-        GList         *syms;
-        GList         *iter;
-        GimpSymmetry  *sym;
-        GParamSpec   **settings;
-        GParamSpec    *spec;
-        gint           n_settings;
-        guint32        base;
-        glong          pos;
-        gint           i = 0;
-
-        xcf_write_prop_type_check_error (info, prop_type);
-        /* because we don't know how much room the Symmetry list
-         * will take we save the file position and write the length
-         * later.
-         */
-        pos = info->cp;
-        size = 0;
-        xcf_write_int32_check_error (info, &size, 1);
-        base = info->cp;
-
-        syms = va_arg (args, GList *);
-
-        /* Index of active symmetry starting at 1
-         * (because 0 means none active) */
-        if (gimp_image_symmetry_selected (image))
-          {
-            for (i = 1, iter = syms; iter; iter = g_list_next (iter), i++)
-              {
-                sym = GIMP_SYMMETRY (iter->data);
-                if (sym == gimp_image_symmetry_selected (image))
-                  break;
-              }
-          }
-        xcf_write_int32_check_error (info, (guint32 *)  &i, 1);
-        /* Number of symmetry that follows. */
-        i = g_list_length (syms);
-        xcf_write_int32_check_error (info, (guint32 *)  &i, 1);
-
-        for (iter = syms; iter; iter = g_list_next (iter))
-          {
-            const gchar *name;
-
-            sym = GIMP_SYMMETRY (iter->data);
-
-            name = g_type_name (sym->type);
-            xcf_write_string_check_error (info, (gchar **) &name, 1);
-
-            settings = gimp_symmetry_get_xcf_settings (sym,
-                                                       &n_settings);
-
-            for (i = 0; i < n_settings; i++)
-              {
-                if (settings[i] == NULL)
-                  continue;
-
-                spec = settings[i];
-
-                switch (spec->value_type)
-                  {
-                  case G_TYPE_BOOLEAN:
-                      {
-                        gboolean value;
-                        guint8   uint_value;
-
-                        g_object_get (sym,
-                                      g_param_spec_get_name (spec),
-                                      &value,
-                                      NULL);
-                        uint_value = (guint8) value;
-                        xcf_write_int8_check_error (info, &uint_value, 1);
-                      }
-                    break;
-                  case G_TYPE_FLOAT:
-                      {
-                        gfloat value;
-
-                        g_object_get (sym,
-                                      g_param_spec_get_name (spec),
-                                      &value,
-                                      NULL);
-                        xcf_write_float_check_error (info, &value, 1);
-                      }
-                    break;
-                  case G_TYPE_DOUBLE:
-                      {
-                        gdouble value;
-                        gfloat  float_value;
-
-                        g_object_get (sym,
-                                      g_param_spec_get_name (spec),
-                                      &value,
-                                      NULL);
-                        float_value = (gfloat) value;
-                        xcf_write_float_check_error (info, &float_value, 1);
-                      }
-                    break;
-                  case G_TYPE_UINT:
-                      {
-                        guint   value;
-                        guint32 uint_value;
-
-                        g_object_get (sym,
-                                      g_param_spec_get_name (spec),
-                                      &value,
-                                      NULL);
-                        uint_value = (guint32) value;
-                        xcf_write_int32_check_error (info, &uint_value, 1);
-                      }
-                    break;
-                  case G_TYPE_INT:
-                      {
-                        gint    value;
-                        guint32 uint_value;
-
-                        g_object_get (sym,
-                                      g_param_spec_get_name (spec),
-                                      &value,
-                                      NULL);
-                        uint_value = (guint32) value;
-                        xcf_write_int32_check_error (info, &uint_value, 1);
-                      }
-                    break;
-                  case G_TYPE_STRING:
-                      {
-                        gchar* value;
-
-                        g_object_get (sym,
-                                      g_param_spec_get_name (spec),
-                                      &value,
-                                      NULL);
-                        xcf_write_string_check_error (info, &value, 1);
-                        g_free (value);
-                      }
-                    break;
-                  default:
-                    /* We don't handle this settings. */
-                    gimp_message (info->gimp, G_OBJECT (info->progress),
-                                  GIMP_MESSAGE_ERROR,
-                                  "Unknown settings '%s' for '%s'",
-                                  name, g_param_spec_get_name (spec));
-                    return FALSE;
-                  }
-              }
-            g_free (settings);
-          }
-
-        size = info->cp - base;
-
-        /* go back to the saved position and write the length */
-        xcf_check_error (xcf_seek_pos (info, pos, error));
-        xcf_write_int32_check_error (info, &size, 1);
-
-        xcf_check_error (xcf_seek_pos (info, base + size, error));
       }
       break;
 

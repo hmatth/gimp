@@ -589,8 +589,11 @@ gimp_paint_options_set_property (GObject      *object,
           if (! gimp_image_symmetry_select (context->image,
                                             options->symmetry))
             {
-              gimp_image_symmetry_add (context->image,
-                                       options->symmetry);
+              GimpSymmetry *sym;
+
+              sym = gimp_image_symmetry_new (context->image,
+                                             options->symmetry);
+              gimp_image_symmetry_add (context->image, sym);
             }
         }
       else

@@ -32,10 +32,17 @@
 #include "gimpsymmetry-mirror.h"
 #include "gimpsymmetry-tiling.h"
 
-static GimpSymmetry * gimp_image_symmetry_new (GimpImage *image,
-                                               GType      type);
+GList *
+gimp_image_symmetry_list (void)
+{
+  GList *list = NULL;
 
-static GimpSymmetry *
+  list = g_list_prepend (list, GINT_TO_POINTER (GIMP_TYPE_MIRROR));
+  list = g_list_prepend (list, GINT_TO_POINTER (GIMP_TYPE_TILING));
+  return list;
+}
+
+GimpSymmetry *
 gimp_image_symmetry_new (GimpImage *image,
                          GType      type)
 {
@@ -52,18 +59,6 @@ gimp_image_symmetry_new (GimpImage *image,
   return sym;
 }
 
-/*** Public Functions ***/
-
-GList *
-gimp_image_symmetry_list (void)
-{
-  GList *list = NULL;
-
-  list = g_list_prepend (list, GINT_TO_POINTER (GIMP_TYPE_MIRROR));
-  list = g_list_prepend (list, GINT_TO_POINTER (GIMP_TYPE_TILING));
-  return list;
-}
-
 /**
  * gimp_image_symmetry_add:
  * @image: the #GimpImage
@@ -72,26 +67,20 @@ gimp_image_symmetry_list (void)
  * Add a symmetry of type @type to @image and make it the
  * selected transformation.
  **/
-GimpSymmetry *
-gimp_image_symmetry_add (GimpImage *image,
-                         GType      type)
+void
+gimp_image_symmetry_add (GimpImage    *image,
+                         GimpSymmetry *sym)
 {
   GimpImagePrivate *private;
-  GimpSymmetry     *sym;
 
-  g_return_val_if_fail (GIMP_IS_IMAGE (image), NULL);
-  g_return_val_if_fail (g_type_is_a (type, GIMP_TYPE_SYMMETRY), NULL);
-
-
-  sym = gimp_image_symmetry_new (image, type);
+  g_return_if_fail (GIMP_IS_IMAGE (image));
+  g_return_if_fail (GIMP_IS_SYMMETRY (sym));
 
   private = GIMP_IMAGE_GET_PRIVATE (image);
 
   private->symmetries = g_list_prepend (private->symmetries,
                                         sym);
   private->selected_symmetry = sym;
-
-  return sym;
 }
 
 /**
@@ -178,6 +167,7 @@ gimp_image_symmetry_select (GimpImage *image,
             }
         }
     }
+
   return FALSE;
 }
 

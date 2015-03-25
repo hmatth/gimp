@@ -159,6 +159,7 @@ xcf_load_image (Gimp     *gimp,
   gint                image_type;
   GimpPrecision       precision = GIMP_PRECISION_U8_GAMMA;
   gint                num_successful_elements = 0;
+  GList              *iter;
 
   /* read in the image width, height and type */
   info->cp += xcf_read_int32 (info->input, (guint32 *) &width, 1);
@@ -270,6 +271,44 @@ xcf_load_image (Gimp     *gimp,
       gimp_parasite_list_remove (private->parasites,
                                  gimp_parasite_name (parasite));
     }
+
+  /* check for symmetry parasites */
+  for (iter = gimp_image_symmetry_list (); iter; iter = g_list_next (iter))
+    {
+      GType  type = (GType) iter->data;
+      gchar *parasite_name = gimp_symmetry_parasite_name (type);
+
+      parasite = gimp_image_parasite_find (image,
+                                           parasite_name);
+      g_free (parasite_name);
+      if (parasite)
+        {
+          GimpSymmetry *sym = gimp_symmetry_from_parasite (parasite,
+                                                           image,
+                                                           type);
+
+          if (sym)
+            {
+              GimpImagePrivate *private = GIMP_IMAGE_GET_PRIVATE (image);
+
+              gimp_parasite_list_remove (private->parasites,
+                                         gimp_parasite_name (parasite));
+
+              gimp_image_symmetry_add (image, sym);
+            }
+        }
+    }
+  parasite = gimp_image_parasite_find (image, "gimp-image-symmetry-selected");
+  if (parasite)
+    {
+      const gchar *str;
+
+      str = gimp_parasite_data (parasite);
+      if (! gimp_image_symmetry_select (image, g_type_from_name (str)))
+        g_warning ("%s: no symmetry of type %s",
+                   G_STRFUNC, str);
+    }
+
 
   /* migrate the old "exif-data" parasite */
   parasite = gimp_image_parasite_find (GIMP_IMAGE (image),
@@ -725,131 +764,6 @@ xcf_load_image_props (XcfInfo   *info,
              */
             private->guides = g_list_reverse (private->guides);
           }
-          break;
-
-        case PROP_SYMMETRY:
-            {
-              GimpSymmetry  *sym;
-              GimpSymmetry  *active_sym = NULL;
-              gint32         active;
-              gint32         n_syms;
-              gchar         *name;
-              GType          type;
-              GParamSpec   **settings;
-              GParamSpec    *spec;
-              gint           n_settings;
-              gint           i, j;
-
-              info->cp += xcf_read_int32 (info->input,
-                                          (guint32 *) &active, 1);
-              info->cp += xcf_read_int32 (info->input,
-                                          (guint32 *) &n_syms, 1);
-              for (i = 1; i <= n_syms; i++)
-                {
-                  info->cp += xcf_read_string (info->input, &name, 1);
-                  type = g_type_from_name (name);
-                  if (! type || ! g_type_is_a (type, GIMP_TYPE_SYMMETRY))
-                    {
-                      gimp_message (info->gimp, G_OBJECT (info->progress),
-                                    GIMP_MESSAGE_ERROR,
-                                    "Unknown Symmetry: %s",
-                                    name);
-                      g_free (name);
-                      return FALSE;
-                    }
-                  sym = gimp_image_symmetry_add (image, type);
-
-                  settings = gimp_symmetry_get_xcf_settings (sym,
-                                                             &n_settings);
-                  for (j = 0; j < n_settings; j++)
-                    {
-                      if (settings[j] == NULL)
-                        continue;
-
-                      spec = settings[j];
-                      switch (spec->value_type)
-                        {
-                        case G_TYPE_BOOLEAN:
-                            {
-                              guint8 value;
-
-                              info->cp += xcf_read_int8 (info->input,
-                                                         &value, 1);
-                              g_object_set (sym,
-                                            g_param_spec_get_name (spec),
-                                            (gboolean) value,
-                                            NULL);
-                            }
-                          break;
-                        case G_TYPE_FLOAT:
-                        case G_TYPE_DOUBLE:
-                            {
-                              gfloat value;
-
-                              info->cp += xcf_read_float (info->input,
-                                                          &value, 1);
-                              g_object_set (sym,
-                                            g_param_spec_get_name (spec),
-                                            (spec->value_type == G_TYPE_FLOAT) ?
-                                            value : (gdouble) value,
-                                            NULL);
-                            }
-                          break;
-                        case G_TYPE_UINT:
-                            {
-                              guint32 value;
-
-                              info->cp += xcf_read_int32 (info->input,
-                                                          &value, 1);
-                              g_object_set (sym,
-                                            g_param_spec_get_name (spec),
-                                            (guint) value,
-                                            NULL);
-                            }
-                          break;
-                        case G_TYPE_INT:
-                            {
-                              guint32 value;
-
-                              info->cp += xcf_read_int32 (info->input,
-                                                          &value, 1);
-                              g_object_set (sym,
-                                            g_param_spec_get_name (spec),
-                                            (gint) value,
-                                            NULL);
-                            }
-                          break;
-                        case G_TYPE_STRING:
-                            {
-                              gchar* value;
-
-                              info->cp += xcf_read_string (info->input,
-                                                           &value, 1);
-                              g_object_set (sym,
-                                            g_param_spec_get_name (spec),
-                                            value,
-                                            NULL);
-                              g_free (value);
-                            }
-                          break;
-                        default:
-                          /* We don't handle this settings. */
-                          gimp_message (info->gimp, G_OBJECT (info->progress),
-                                        GIMP_MESSAGE_ERROR,
-                                        "Unknown settings '%s' for '%s'",
-                                        name, g_param_spec_get_name (spec));
-                          g_free (name);
-                          return FALSE;
-                        }
-                    }
-                  g_free (settings);
-
-                  if (active == i)
-                    active_sym = sym;
-                }
-              gimp_image_symmetry_select (image, active_sym->type);
-              g_free (name);
-            }
           break;
 
         case PROP_SAMPLE_POINTS:

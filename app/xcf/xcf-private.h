@@ -56,8 +56,7 @@ typedef enum
   PROP_GROUP_ITEM         = 29,
   PROP_ITEM_PATH          = 30,
   PROP_GROUP_ITEM_FLAGS   = 31,
-  PROP_LOCK_POSITION      = 32,
-  PROP_SYMMETRY           = 33
+  PROP_LOCK_POSITION      = 32
 } PropType;
 
 typedef enum

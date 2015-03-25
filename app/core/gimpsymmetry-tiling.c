@@ -100,7 +100,6 @@ gimp_tiling_class_init (GimpTilingClass *klass)
   symmetry_class->update_strokes   = gimp_tiling_update_strokes;
   symmetry_class->get_operation    = gimp_tiling_get_operation;
   symmetry_class->get_settings     = gimp_tiling_get_settings;
-  symmetry_class->get_xcf_settings = gimp_tiling_get_settings;
 
   GIMP_CONFIG_INSTALL_PROP_DOUBLE (object_class, PROP_X_INTERVAL,
                                    "x-interval", _("Intervals on x-axis (pixels)"),

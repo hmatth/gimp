@@ -25,10 +25,14 @@
 #include <gegl.h>
 #include <gdk-pixbuf/gdk-pixbuf.h>
 
+#include "libgimpbase/gimpbase.h"
+#include "libgimpconfig/gimpconfig.h"
+
 #include "core-types.h"
 
 #include "gimpdrawable.h"
 #include "gimpimage.h"
+#include "gimpimage-symmetry.h"
 #include "gimpitem.h"
 #include "gimpsymmetry.h"
 
@@ -72,7 +76,9 @@ static GParamSpec **
           gimp_symmetry_real_get_settings (GimpSymmetry *sym,
                                            gint         *n_properties);
 
-G_DEFINE_TYPE (GimpSymmetry, gimp_symmetry, GIMP_TYPE_OBJECT)
+G_DEFINE_TYPE_WITH_CODE (GimpSymmetry, gimp_symmetry, GIMP_TYPE_OBJECT,
+                         G_IMPLEMENT_INTERFACE (GIMP_TYPE_CONFIG, NULL))
+
 
 #define parent_class gimp_symmetry_parent_class
 
@@ -116,7 +122,6 @@ gimp_symmetry_class_init (GimpSymmetryClass *klass)
   klass->update_strokes      = gimp_symmetry_real_update_strokes;
   klass->get_operation       = gimp_symmetry_real_get_op;
   klass->get_settings        = gimp_symmetry_real_get_settings;
-  klass->get_xcf_settings    = gimp_symmetry_real_get_settings;
 
   g_object_class_install_property (object_class, PROP_IMAGE,
                                    g_param_spec_object ("image",
@@ -347,24 +352,69 @@ gimp_symmetry_get_settings (GimpSymmetry *sym,
                                                       n_properties);
 }
 
-/**
- * gimp_symmetry_get_xcf_settings:
- * @sym:         the #GimpSymmetry
- * @n_properties: the number of properties in the returned array
+/*
+ * gimp_symmetry_parasite_name:
+ * @type: the #GimpSymmetry's #GType
  *
- * Returns an array of the symmetry properties which are to be serialized
- * when saving to XCF.
- * These properties may be different to `gimp_symmetry_get_settings()`
- * (for instance some properties are not meant to be user-changeable but
- * still saved)
- * The returned array must be freed by the caller.
- **/
-GParamSpec **
-gimp_symmetry_get_xcf_settings (GimpSymmetry *sym,
-                                gint         *n_properties)
+ * Returns: a newly allocated string.
+ */
+gchar *
+gimp_symmetry_parasite_name (GType type)
 {
+  GimpSymmetryClass *klass;
+
+  klass = g_type_class_ref (type);
+
+  return g_strconcat ("gimp-image-symmetry:", klass->label, NULL);
+}
+
+GimpParasite *
+gimp_symmetry_to_parasite (const GimpSymmetry *sym)
+{
+  GimpParasite *parasite;
+  gchar        *str;
+
   g_return_val_if_fail (GIMP_IS_SYMMETRY (sym), NULL);
 
-  return GIMP_SYMMETRY_GET_CLASS (sym)->get_xcf_settings (sym,
-                                                          n_properties);
+  str = gimp_config_serialize_to_string (GIMP_CONFIG (sym), NULL);
+  g_return_val_if_fail (str != NULL, NULL);
+
+  parasite = gimp_parasite_new (gimp_symmetry_parasite_name (sym->type),
+                                GIMP_PARASITE_PERSISTENT,
+                                strlen (str) + 1, str);
+  g_free (str);
+
+  return parasite;
+}
+
+GimpSymmetry *
+gimp_symmetry_from_parasite (const GimpParasite *parasite,
+                             GimpImage          *image,
+                             GType               type)
+{
+  GimpSymmetry    *symmetry;
+  const gchar     *str;
+  GError          *error = NULL;
+
+  g_return_val_if_fail (parasite != NULL, NULL);
+  g_return_val_if_fail (strcmp (gimp_parasite_name (parasite),
+                                gimp_symmetry_parasite_name (type)) == 0,
+                        NULL);
+
+  str = gimp_parasite_data (parasite);
+  g_return_val_if_fail (str != NULL, NULL);
+
+  symmetry = gimp_image_symmetry_new (image, type);
+
+  if (! gimp_config_deserialize_string (GIMP_CONFIG (symmetry),
+                                        str,
+                                        gimp_parasite_data_size (parasite),
+                                        NULL,
+                                        &error))
+    {
+      g_warning ("Failed to deserialize symmetry parasite: %s", error->message);
+      g_error_free (error);
+    }
+
+  return symmetry;
 }

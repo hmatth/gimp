@@ -86,8 +86,6 @@ static void       gimp_mirror_guide_position_cb   (GObject      *object,
                                                    GimpMirror   *mirror);
 static GParamSpec ** gimp_mirror_get_settings     (GimpSymmetry *sym,
                                                    gint         *n_settings);
-static GParamSpec ** gimp_mirror_get_xcf_settings (GimpSymmetry *sym,
-                                                   gint         *n_settings);
 static void  gimp_mirror_set_horizontal_symmetry  (GimpMirror   *mirror,
                                                    gboolean      active);
 static void    gimp_mirror_set_vertical_symmetry  (GimpMirror   *mirror,
@@ -102,18 +100,17 @@ G_DEFINE_TYPE (GimpMirror, gimp_mirror, GIMP_TYPE_SYMMETRY)
 static void
 gimp_mirror_class_init (GimpMirrorClass *klass)
 {
-  GObjectClass         *object_class       = G_OBJECT_CLASS (klass);
+  GObjectClass      *object_class   = G_OBJECT_CLASS (klass);
   GimpSymmetryClass *symmetry_class = GIMP_SYMMETRY_CLASS (klass);
 
-  object_class->finalize               = gimp_mirror_finalize;
-  object_class->set_property           = gimp_mirror_set_property;
-  object_class->get_property           = gimp_mirror_get_property;
+  object_class->finalize            = gimp_mirror_finalize;
+  object_class->set_property        = gimp_mirror_set_property;
+  object_class->get_property        = gimp_mirror_get_property;
 
-  symmetry_class->label            = "Mirror";
-  symmetry_class->update_strokes   = gimp_mirror_update_strokes;
-  symmetry_class->get_operation    = gimp_mirror_get_operation;
-  symmetry_class->get_settings     = gimp_mirror_get_settings;
-  symmetry_class->get_xcf_settings = gimp_mirror_get_xcf_settings;
+  symmetry_class->label             = "Mirror";
+  symmetry_class->update_strokes    = gimp_mirror_update_strokes;
+  symmetry_class->get_operation     = gimp_mirror_get_operation;
+  symmetry_class->get_settings      = gimp_mirror_get_settings;
 
   /* Properties for user settings */
   GIMP_CONFIG_INSTALL_PROP_BOOLEAN (object_class, PROP_HORIZONTAL_SYMMETRY,
@@ -503,31 +500,6 @@ gimp_mirror_get_settings (GimpSymmetry *sym,
                                             "point-symmetry");
   pspecs[3] = NULL;
   pspecs[4] = g_object_class_find_property (G_OBJECT_GET_CLASS (sym),
-                                            "disable-transformation");
-
-  return pspecs;
-}
-
-static GParamSpec **
-gimp_mirror_get_xcf_settings (GimpSymmetry *sym,
-                              gint         *n_settings)
-{
-  GParamSpec **pspecs;
-
-  *n_settings = 6;
-  pspecs = g_new (GParamSpec*, 6);
-
-  pspecs[0] = g_object_class_find_property (G_OBJECT_GET_CLASS (sym),
-                                            "horizontal-symmetry");
-  pspecs[1] = g_object_class_find_property (G_OBJECT_GET_CLASS (sym),
-                                            "vertical-symmetry");
-  pspecs[2] = g_object_class_find_property (G_OBJECT_GET_CLASS (sym),
-                                            "point-symmetry");
-  pspecs[3] = g_object_class_find_property (G_OBJECT_GET_CLASS (sym),
-                                            "horizontal-position");
-  pspecs[4] = g_object_class_find_property (G_OBJECT_GET_CLASS (sym),
-                                            "vertical-position");
-  pspecs[5] = g_object_class_find_property (G_OBJECT_GET_CLASS (sym),
                                             "disable-transformation");
 
   return pspecs;
