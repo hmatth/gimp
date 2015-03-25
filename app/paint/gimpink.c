@@ -238,9 +238,9 @@ gimp_ink_get_paint_buffer (GimpPaintCore    *paint_core,
   x2 = CLAMP ((x + width)  / SUBSAMPLE + 2, 0, dwidth);
   y2 = CLAMP ((y + height) / SUBSAMPLE + 2, 0, dheight);
 
-  if (*paint_width)
+  if (paint_width)
     *paint_width = width / SUBSAMPLE + 3;
-  if (*paint_height)
+  if (paint_height)
     *paint_height = height / SUBSAMPLE + 3;
 
   /*  configure the canvas buffer  */
