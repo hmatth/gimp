@@ -170,6 +170,10 @@ app/core/gimppdbprogress.c
 app/core/gimpprogress.c
 app/core/gimpselection.c
 app/core/gimpstrokeoptions.c
+app/core/gimpsymmetry.c
+app/core/gimpsymmetry-mandala.c
+app/core/gimpsymmetry-mirror.c
+app/core/gimpsymmetry-tiling.c
 app/core/gimptagcache.c
 app/core/gimptemplate.c
 app/core/gimptooloptions.c
