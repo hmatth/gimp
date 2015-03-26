@@ -110,7 +110,7 @@ gimp_mirror_class_init (GimpMirrorClass *klass)
   object_class->set_property        = gimp_mirror_set_property;
   object_class->get_property        = gimp_mirror_get_property;
 
-  symmetry_class->label             = "Mirror";
+  symmetry_class->label             = _("Mirror");
   symmetry_class->update_strokes    = gimp_mirror_update_strokes;
   symmetry_class->get_operation     = gimp_mirror_get_operation;
   symmetry_class->get_settings      = gimp_mirror_get_settings;

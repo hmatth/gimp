@@ -96,7 +96,7 @@ gimp_tiling_class_init (GimpTilingClass *klass)
   object_class->set_property           = gimp_tiling_set_property;
   object_class->get_property           = gimp_tiling_get_property;
 
-  symmetry_class->label            = "Tiling";
+  symmetry_class->label            = _("Tiling");
   symmetry_class->update_strokes   = gimp_tiling_update_strokes;
   symmetry_class->get_operation    = gimp_tiling_get_operation;
   symmetry_class->get_settings     = gimp_tiling_get_settings;

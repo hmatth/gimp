@@ -109,7 +109,7 @@ gimp_mandala_class_init (GimpMandalaClass *klass)
   object_class->set_property        = gimp_mandala_set_property;
   object_class->get_property        = gimp_mandala_get_property;
 
-  symmetry_class->label             = "Mandala";
+  symmetry_class->label             = _("Mandala");
   symmetry_class->update_strokes    = gimp_mandala_update_strokes;
   symmetry_class->get_operation     = gimp_mandala_get_operation;
   symmetry_class->get_settings      = gimp_mandala_get_settings;

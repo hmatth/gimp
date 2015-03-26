@@ -128,7 +128,7 @@ gimp_symmetry_class_init (GimpSymmetryClass *klass)
   object_class->set_property = gimp_symmetry_set_property;
   object_class->get_property = gimp_symmetry_get_property;
 
-  klass->label               = "None";
+  klass->label               = _("None");
   klass->update_strokes      = gimp_symmetry_real_update_strokes;
   klass->get_operation       = gimp_symmetry_real_get_op;
   klass->get_settings        = gimp_symmetry_real_get_settings;
