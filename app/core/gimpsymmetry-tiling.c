@@ -308,24 +308,26 @@ gimp_tiling_update_strokes (GimpSymmetry *sym,
   for (y_count = 0, y = starty; y < height + tiling->interval_y;
        y_count++, y += tiling->interval_y)
     {
-      if (tiling->interval_y < 1.0 ||
-          (tiling->max_y && y_count >= (gint) tiling->max_y))
+      if (tiling->max_y && y_count >= (gint) tiling->max_y)
         break;
       for (x_count = 0, x = startx; x < width + tiling->interval_x;
            x_count++, x += tiling->interval_x)
         {
-          if (tiling->interval_x < 1.0 ||
-              (tiling->max_x && x_count >= (gint) tiling->max_x))
+          if (tiling->max_x && x_count >= (gint) tiling->max_x)
             break;
           coords = g_memdup (origin, sizeof (GimpCoords));
           coords->x = x;
           coords->y = y;
           strokes = g_list_prepend (strokes, coords);
+          if (tiling->interval_x < 1.0)
+            break;
         }
       if (tiling->max_x || startx + tiling->shift <= 0.0)
         startx = startx + tiling->shift;
       else
         startx = startx - tiling->interval_x + tiling->shift;
+      if (tiling->interval_y < 1.0)
+        break;
     }
   sym->strokes = strokes;
 
