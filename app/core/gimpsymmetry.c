@@ -396,6 +396,7 @@ GimpParasite *
 gimp_symmetry_to_parasite (const GimpSymmetry *sym)
 {
   GimpParasite *parasite;
+  gchar        *parasite_name;
   gchar        *str;
 
   g_return_val_if_fail (GIMP_IS_SYMMETRY (sym), NULL);
@@ -403,9 +404,11 @@ gimp_symmetry_to_parasite (const GimpSymmetry *sym)
   str = gimp_config_serialize_to_string (GIMP_CONFIG (sym), NULL);
   g_return_val_if_fail (str != NULL, NULL);
 
-  parasite = gimp_parasite_new (gimp_symmetry_parasite_name (sym->type),
+  parasite_name = gimp_symmetry_parasite_name (sym->type);
+  parasite = gimp_parasite_new (parasite_name,
                                 GIMP_PARASITE_PERSISTENT,
                                 strlen (str) + 1, str);
+  g_free (parasite_name);
   g_free (str);
 
   return parasite;
@@ -417,13 +420,17 @@ gimp_symmetry_from_parasite (const GimpParasite *parasite,
                              GType               type)
 {
   GimpSymmetry    *symmetry;
+  gchar           *parasite_name;
   const gchar     *str;
   GError          *error = NULL;
 
+  parasite_name = gimp_symmetry_parasite_name (type);
+
   g_return_val_if_fail (parasite != NULL, NULL);
   g_return_val_if_fail (strcmp (gimp_parasite_name (parasite),
-                                gimp_symmetry_parasite_name (type)) == 0,
+                                parasite_name) == 0,
                         NULL);
+  g_free (parasite_name);
 
   str = gimp_parasite_data (parasite);
   g_return_val_if_fail (str != NULL, NULL);

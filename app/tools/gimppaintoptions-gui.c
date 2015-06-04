@@ -262,16 +262,17 @@ gimp_paint_options_gui (GimpToolOptions *tool_options)
           GtkListStore *store;
           GtkTreeIter   iter;
           GList        *syms;
+          GList        *sym_iter;
 
           store = gimp_int_store_new ();
 
           syms = gimp_image_symmetry_list ();
-          for (syms = gimp_image_symmetry_list (); syms; syms = g_list_next (syms))
+          for (sym_iter = syms; sym_iter; sym_iter = g_list_next (sym_iter))
             {
               GimpSymmetryClass *klass;
               GType              type;
 
-              type = (GType) syms->data;
+              type = (GType) sym_iter->data;
               klass = g_type_class_ref (type);
 
               gtk_list_store_prepend (store, &iter);
@@ -279,10 +280,12 @@ gimp_paint_options_gui (GimpToolOptions *tool_options)
                                   GIMP_INT_STORE_LABEL,
                                   klass->label,
                                   GIMP_INT_STORE_VALUE,
-                                  syms->data,
+                                  sym_iter->data,
                                   -1);
               g_type_class_unref (klass);
             }
+          g_list_free (syms);
+
           gtk_list_store_prepend (store, &iter);
           gtk_list_store_set (store, &iter,
                               GIMP_INT_STORE_LABEL, _("None"),
