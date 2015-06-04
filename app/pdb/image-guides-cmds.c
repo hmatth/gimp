@@ -19,7 +19,6 @@
 
 #include "config.h"
 
-#include <cairo.h>
 #include <gegl.h>
 
 #include <gdk-pixbuf/gdk-pixbuf.h>
@@ -28,6 +27,7 @@
 
 #include "pdb-types.h"
 
+#include "cairo.h"
 #include "core/gimpguide.h"
 #include "core/gimpimage-guides.h"
 #include "core/gimpimage-undo-push.h"
