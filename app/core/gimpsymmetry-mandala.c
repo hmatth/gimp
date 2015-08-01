@@ -476,49 +476,56 @@ gimp_mandala_get_operation (GimpSymmetry *sym,
                             gint          paint_height)
 {
   GimpMandala *mandala  = GIMP_MANDALA (sym);
-  GeglNode    *op;
+  GeglNode    *op       = NULL;
   gint         i;
 
   g_return_val_if_fail (GIMP_IS_MANDALA (sym), NULL);
   g_return_val_if_fail (stroke < mandala->size, NULL);
 
-  if (mandala->disable_transformation || stroke == 0 ||
-      paint_width == 0 || paint_height == 0)
-    op = NULL;
-
-  if (mandala->size != mandala->cached_size)
+  if (! mandala->disable_transformation &&
+      stroke != 0                       &&
+      paint_width != 0                  &&
+      paint_height != 0)
     {
-      GList *iter;
-      if (mandala->ops)
+      if (mandala->size != mandala->cached_size      ||
+          mandala->cached_paint_width != paint_width ||
+          mandala->cached_paint_height != paint_height)
         {
-          for (iter = mandala->ops; iter; iter = g_list_next (iter))
+          GList *iter;
+          if (mandala->ops)
             {
-              if (iter->data)
-                g_object_unref (G_OBJECT (iter->data));
+              for (iter = mandala->ops; iter; iter = g_list_next (iter))
+                {
+                  if (iter->data)
+                    g_object_unref (G_OBJECT (iter->data));
+                }
+              g_list_free (mandala->ops);
+              mandala->ops = NULL;
             }
-          g_list_free (mandala->ops);
-          mandala->ops = NULL;
+
+          mandala->ops = g_list_prepend (mandala->ops, NULL);
+          for (i = 1; i < mandala->size; i++)
+            {
+              op = gegl_node_new_child (NULL,
+                                        "operation", "gegl:rotate",
+                                        "origin-x",
+                                        (gdouble) paint_width / 2.0,
+                                        "origin-y",
+                                        (gdouble) paint_height / 2.0,
+                                        "degrees",
+                                        i * 360.0 / (gdouble) mandala->size,
+                                        NULL);
+              mandala->ops = g_list_prepend (mandala->ops, op);
+            }
+          mandala->ops = g_list_reverse (mandala->ops);
+          mandala->cached_size = mandala->size;
+          mandala->cached_paint_width = paint_width;
+          mandala->cached_paint_height = paint_height;
         }
 
-      mandala->ops = g_list_prepend (mandala->ops, NULL);
-      for (i = 1; i < mandala->size; i++)
-        {
-          op = gegl_node_new_child (NULL,
-                                    "operation", "gegl:rotate",
-                                    "origin-x",
-                                    (gdouble) paint_width / 2.0,
-                                    "origin-y",
-                                    (gdouble) paint_height / 2.0,
-                                    "degrees",
-                                    i * 360.0 / (gdouble) mandala->size,
-                                    NULL);
-          mandala->ops = g_list_prepend (mandala->ops, op);
-        }
-      mandala->ops = g_list_reverse (mandala->ops);
-      mandala->cached_size = mandala->size;
+      op = g_list_nth_data (mandala->ops, stroke);
     }
 
-  op = g_list_nth_data (mandala->ops, stroke);
   return op;
 }
 
